@@ -178,7 +178,7 @@
         <div class="ed-row"><span>Color</span><input type="color" id="ed-color" value="#8a8f98"></div>
         <div class="ed-row"><span>Size</span><input type="range" id="ed-pencil-size" min="0.2" max="3" step="0.1" value="1"><span id="ed-pencil-size-val">1</span></div>
       </div>
-      <!-- BOTTOM-RIGHT: type tag + inspector -->
+      <!-- BOTTOM-RIGHT: type tag + inspector + assets -->
       <div class="ed-panel ed-br">
         <div class="ed-title">Figure Type</div>
         <div class="ed-grid">
@@ -186,8 +186,11 @@
           <div class="ed-btn ed-type" data-type="bush">🌿 Bush/Tree</div>
           <div class="ed-btn ed-type" data-type="water">💧 Water</div>
         </div>
+        <div class="ed-title" style="margin-top:8px">📦 3D Assets</div>
+        <div id="ed-assets-list"></div>
+        <div class="ed-btn" id="ed-upload-model">📂 Upload GLTF/DAE</div>
         <div class="ed-title" style="margin-top:8px">Inspector</div>
-        <div id="ed-inspector"><div class="muted">Click an object to edit it.<br>Left-drag empty space to orbit (or Shift+drag).</div></div>
+        <div id="ed-inspector"><div class="muted">Click an object to edit it.<br>Left-drag empty space to orbit (or Shift+drag).<br>📦 Click an asset above to place it.</div></div>
         <div class="ed-btn ed-danger" id="ed-delete" style="margin-top:8px">Delete (Del)</div>
       </div>
     </div>

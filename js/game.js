@@ -330,13 +330,30 @@ class Game {
         this.camDist - zoom*CONFIG.CAM_ZOOM_STEP));
     }
 
-    // Local tank input
+    // Local tank input (keyboard/mouse OR touch)
     if(this.localTank && this.localTank.alive && !this.localTank.dying){
-      const throttle = (this.input.pressed('forward')?1:0) - (this.input.pressed('backward')?1:0);
-      const turn     = (this.input.pressed('right')?1:0)   - (this.input.pressed('left')?1:0);
-      const turretAngle = this._mouseWorldAngle();
-      const fire = this.input.pressed('fire');
-      const handbrake = this.input.pressed('handbrake');
+      let throttle, turn, turretAngle, fire, handbrake;
+      
+      const touchInput = this.input.getTouchInput();
+      
+      if(touchInput && touchInput.isTouch){
+        // Touch device: use joystick values
+        throttle = touchInput.throttle;
+        turn = touchInput.turn;
+        // Turret: joystick X axis controls angle offset
+        const baseAngle = this.localTank.turretAngle;
+        turretAngle = baseAngle + touchInput.turretAngle * 0.05;
+        fire = touchInput.fire;
+        handbrake = false;
+      } else {
+        // Desktop: keyboard + mouse
+        throttle = (this.input.pressed('forward')?1:0) - (this.input.pressed('backward')?1:0);
+        turn = (this.input.pressed('right')?1:0)   - (this.input.pressed('left')?1:0);
+        turretAngle = this._mouseWorldAngle();
+        fire = this.input.pressed('fire');
+        handbrake = this.input.pressed('handbrake');
+      }
+      
       const input = {throttle, turn, turretWorldAngle:turretAngle, fire, handbrake};
       this.localTank.setInput(input);
       // Client: forward input to host

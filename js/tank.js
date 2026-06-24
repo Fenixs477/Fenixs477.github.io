@@ -4,6 +4,7 @@
    Camouflage in bushes/trees. View-range circle. Box collider +
    mass (ram damage). Full death sequence: turret launches, body
    blackens + burns, 8-point star decal, sinks after 5s.
+   Uses MeshStandardMaterial for proper shadow casting/receiving.
    ============================================================ */
 
 class Tank {
@@ -38,9 +39,9 @@ class Tank {
     this.camoFactor = 1;       // 1 visible, 0 hidden
 
     // death animation
-    this.dying = false;        // playing death sequence
-    this.deathT = 0;           // elapsed death time
-    this.removeAt = -1;        // when to fully remove (-1 = manual)
+    this.dying = false;
+    this.deathT = 0;
+    this.removeAt = -1;
 
     // collider half-extents (box)
     this.colHalfW = def.body.w*0.55;
@@ -50,19 +51,27 @@ class Tank {
     if(Models && Models.hasModel(def.model||def.id)) this._loadModel();
   }
 
-  /* ---------- Mesh ---------- */
+  /* ---------- Mesh with MeshStandardMaterial (proper shadow support) ---------- */
+  _tankMat(color){
+    return new THREE.MeshStandardMaterial({color, roughness:0.45, metalness:0.55, flatShading:false});
+  }
+
   _buildCubeMesh(){
     this.bodyGroup = new THREE.Group();
     const b = this.def.body;
     this.bodyMat = this._tankMat(this.color);
     this.bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.l), this.bodyMat);
     this.bodyMesh.position.y = b.h/2 + 0.45;
+    this.bodyMesh.castShadow = true;
+    this.bodyMesh.receiveShadow = true;
     this.bodyGroup.add(this.bodyMesh);
 
     const treadMat = new THREE.MeshStandardMaterial({color:0x222226, roughness:1});
     [-1,1].forEach(s=>{
       const t = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, b.l+0.2), treadMat);
       t.position.set(s*(b.w/2+0.05), 0.35, 0);
+      t.castShadow = true;
+      t.receiveShadow = true;
       this.bodyGroup.add(t);
     });
 
@@ -71,6 +80,8 @@ class Tank {
     this.turretMat = this._tankMat(this.def.turretColor);
     this.turretMesh = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.l), this.turretMat);
     this.turretMesh.position.y = t.h/2;
+    this.turretMesh.castShadow = true;
+    this.turretMesh.receiveShadow = true;
     this.turretGroup.add(this.turretMesh);
 
     const barrelMat = new THREE.MeshStandardMaterial({color:0x2a2a2e, roughness:0.4, metalness:0.6});
@@ -78,6 +89,8 @@ class Tank {
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(br, br, bl, 10), barrelMat);
     barrel.rotation.x = Math.PI/2;
     barrel.position.set(0, t.h*0.4, t.l/2 + bl/2);
+    barrel.castShadow = true;
+    barrel.receiveShadow = true;
     this.turretGroup.add(barrel);
     this.barrelEnd = new THREE.Object3D();
     this.barrelEnd.position.set(0, t.h*0.4, t.l/2 + bl + 0.2);
@@ -88,10 +101,6 @@ class Tank {
     this.root.add(this.turretGroup);
     this._addOverlays(t.h);
     this._syncTransform();
-  }
-
-  _tankMat(color){
-    return new THREE.MeshStandardMaterial({color, roughness:0.45, metalness:0.55, flatShading:false});
   }
 
   _loadModel(){
@@ -121,11 +130,10 @@ class Tank {
   }
 
   _addOverlays(turretH){
-    // Billboard HP bar (sprite faces camera automatically)
     this.hpSprite = this._makeHpSprite();
     this.hpSprite.userData.isOverlay = true;
     this.hpSprite.position.y = turretH + 2.0;
-    this.root.add(this.hpSprite);              // on root so it doesn't spin with turret
+    this.root.add(this.hpSprite);
 
     this.nameSprite = this._makeNameTag(this.name);
     this.nameSprite.userData.isOverlay = true;
@@ -172,10 +180,8 @@ class Tank {
   makeViewRangeCircle(){
     const w = this.def;
     const viewRange = w.viewRange || 70;
-    // Width factor: inner radius = viewRange * (1 - widthFactor), outer = viewRange
-    // Default width factor from settings (0-1)
     const wf = Menu && Menu.settings ? Menu.settings.viewRangeWidth : 0.5;
-    const innerR = viewRange * (1 - wf * 0.4); // 0% -> same as outer (thin), 100% -> 0.6*outer (fat)
+    const innerR = viewRange * (1 - wf * 0.4);
     const geo = new THREE.RingGeometry(Math.max(0.1, innerR), viewRange, 64);
     geo.rotateX(-Math.PI/2);
     const mat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.25, side:THREE.DoubleSide, depthWrite:false});
@@ -205,25 +211,19 @@ class Tank {
   setInput(input){ this._input = input; }
 
   update(dt, world, game){
-    // ---- death animation ----
     if(this.dying){
       this._updateDeath(dt, game);
       return;
     }
-    if(!this.alive){
-      // alive=false but not yet dying -> should not normally happen (death starts immediately)
-      return;
-    }
+    if(!this.alive) return;
+
     const d = this.def;
     const inp = this._input || {};
 
-    // camo update
     this.camoState = world.hidingIn(this.x, this.z);
     this.camoFactor = world.camoFactor(this.x, this.z);
-    // hidden tanks are visually faded
     this._applyCamoVisual();
 
-    // throttle -> desired speed (mass adds drag to top speed)
     const speedCap = d.speed * (1 - Math.min(0.35, (this.mass-18)/120));
     const target = (inp.throttle||0) * speedCap;
     if(this.speed < target) this.speed = Math.min(target, this.speed + d.accel*dt);
@@ -262,7 +262,6 @@ class Tank {
     if(!world.collides(this.x, nz, r)) this.z = nz;
     else { this.speed *= 0.5; this.vz *= 0.4; }
 
-    // ---- tank-vs-tank ram (box overlap, mass-based damage) ----
     if(game) this._ramCheck(game);
 
     const lim = world.half - 3;
@@ -286,8 +285,7 @@ class Tank {
   }
 
   _applyCamoVisual(){
-    const op = this.camoFactor; // 1 = fully visible
-    // fade overlays + body a bit when hidden
+    const op = this.camoFactor;
     if(this.hpSprite) this.hpSprite.material.opacity = op;
     if(this.nameSprite) this.nameSprite.material.opacity = op;
   }
@@ -299,7 +297,6 @@ class Tank {
       const overlapX = (this.colHalfW + o.colHalfW) - Math.abs(dx);
       const overlapZ = (this.colHalfL + o.colHalfL) - Math.abs(dz);
       if(overlapX>0 && overlapZ>0){
-        // separate along smallest overlap
         if(overlapX < overlapZ){
           const push = overlapX/2 * (dx<0?1:-1);
           this.x -= push; o.x += push;
@@ -307,7 +304,6 @@ class Tank {
           const push = overlapZ/2 * (dz<0?1:-1);
           this.z -= push; o.z += push;
         }
-        // ram damage based on closing speed & mass difference
         const rel = Math.abs(this.speed) + Math.abs(o.speed);
         if(rel > 8){
           const heavier = this.mass >= o.mass ? this : o;
@@ -349,39 +345,36 @@ class Tank {
   /* ---------- Death sequence ---------- */
   _startDeath(game, killer){
     this.dying = true; this.deathT = 0;
-    this.removeAt = (game? game.time : 0) + 9;   // wreck fully removed at 9s
-    // hide overlays
+    this.removeAt = (game? game.time : 0) + 9;
+
     if(this.hpSprite) this.hpSprite.visible = false;
     if(this.nameSprite) this.nameSprite.visible = false;
     if(this.viewCircle) this.viewCircle.visible = false;
 
-    // 1) TURRET launches up immediately (impulse + gravity + spin)
+    // Turret launch
     this._turretVel = new THREE.Vector3(
       (Math.random()-0.5)*4, 14 + Math.random()*4, (Math.random()-0.5)*4);
     this._turretSpin = new THREE.Vector3((Math.random()-0.5)*4,(Math.random()-0.5)*6,(Math.random()-0.5)*4);
 
-    // 2) BODY blackens
+    // Blacken body + turret (works with MeshStandardMaterial!)
     if(this.bodyMat){ this.bodyMat.color.setHex(0x141414); this.bodyMat.emissive=new THREE.Color(0x3a1500); this.bodyMat.emissiveIntensity=0.6; }
-    // TURRET + barrel also blacken (burnt metal) — FIXED to work properly!
     if(this.turretMat){ this.turretMat.color.setHex(0x1a1a1a); this.turretMat.emissive=new THREE.Color(0x2a1000); this.turretMat.emissiveIntensity=0.5; }
-    // Force turretMesh color update
-    if(this.turretMesh && this.turretMesh.material){
-      this.turretMesh.material.color.setHex(0x1a1a1a);
-      this.turretMesh.material.emissive = new THREE.Color(0x2a1000);
-      this.turretMesh.material.emissiveIntensity = 0.5;
-    }
-    // Body mesh too
-    if(this.bodyMesh && this.bodyMesh.material){
+    if(this.bodyMesh && this.bodyMesh.material !== this.bodyMat){
       this.bodyMesh.material.color.setHex(0x141414);
       this.bodyMesh.material.emissive = new THREE.Color(0x3a1500);
       this.bodyMesh.material.emissiveIntensity = 0.6;
     }
+    if(this.turretMesh && this.turretMesh.material !== this.turretMat){
+      this.turretMesh.material.color.setHex(0x1a1a1a);
+      this.turretMesh.material.emissive = new THREE.Color(0x2a1000);
+      this.turretMesh.material.emissiveIntensity = 0.5;
+    }
 
-    // 3) fire particles (attach to root, updated in _updateDeath)
+    // Fire particles
     this._firePts = this._makeFireParticles();
     this.root.add(this._firePts);
 
-    // 4) eight-pointed black star decal on ground — 2x bigger!
+    // 2x bigger death star
     this._star = this._makeStarDecal();
     this._star.position.set(0, 0.25, 0);
     this.root.add(this._star);
@@ -404,8 +397,6 @@ class Tank {
   }
 
   _makeStarDecal(){
-    // 8-pointed star (two overlapping squares) as a flat shape on the ground
-    // 2x bigger than before (outer = 13.6 instead of 6.8)
     const shape = new THREE.Shape();
     const spikes=8, outer=13.6, inner=4.8;
     for(let i=0;i<spikes*2;i++){
@@ -423,15 +414,13 @@ class Tank {
   _updateDeath(dt, game){
     this.deathT += dt;
 
-    // turret ballistic
     if(this._turretVel){
       this.turretGroup.position.x += this._turretVel.x*dt;
       this.turretGroup.position.y += this._turretVel.y*dt;
       this.turretGroup.position.z += this._turretVel.z*dt;
-      this._turretVel.y -= 22*dt;            // gravity
+      this._turretVel.y -= 22*dt;
       this.turretGroup.rotation.x += this._turretSpin.x*dt;
       this.turretGroup.rotation.z += this._turretSpin.z*dt;
-      // when it lands, stop bouncing
       if(this.turretGroup.position.y <= this.def.body.h+0.45 && this._turretVel.y<0){
         this.turretGroup.position.y = this.def.body.h+0.45;
         this._turretVel.y *= -0.3;
@@ -440,7 +429,6 @@ class Tank {
       }
     }
 
-    // fire flicker
     if(this._firePts){
       this._firePts.children.forEach(p=>{
         p.position.y = p.userData.baseY + Math.sin(game.time*8+p.userData.phase)*0.3;
@@ -448,7 +436,6 @@ class Tank {
       });
     }
 
-    // after 3s, start sinking + fade star + fire
     if(this.deathT > 3){
       const sink = (this.deathT-3);
       this.root.position.y = -sink*1.2;
@@ -456,10 +443,9 @@ class Tank {
       if(this._firePts){ this._firePts.children.forEach(p=>{ p.material.opacity=Math.max(0,0.9-sink*0.5); }); }
     }
 
-    // send player to menu at 4s (non-local tanks keep sinking until removed)
     if(this.deathT > 4 && game && this.isLocal && !this._notifiedDeath){
       this._notifiedDeath = true;
-      game.onLocalDeath();              // -> main menu
+      game.onLocalDeath();
     }
     if(this.deathT > 8){
       this.root.visible = false;
