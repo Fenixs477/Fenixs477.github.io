@@ -1,0 +1,3511 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tank Party</title>
+<style>
+/* ===== TANK PARTY - UI / Menus ===== */
+:root{
+  --bg:#1a1a1a;
+  --bg2:#222;
+  --card:#2b2b2b;
+  --line:#3a3a3a;
+  --fg:#ffffff;
+  --muted:#9a9a9a;
+  --accent:#ffb12b;
+  --accent2:#ff5b3b;
+  --ok:#3ad17a;
+  --danger:#ff3b3b;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:'Segoe UI',Tahoma,sans-serif;user-select:none}
+
+#game-root{position:fixed;inset:0;z-index:0}
+#game-root canvas{display:block}
+#ui-layer{position:fixed;inset:0;z-index:10;pointer-events:none}
+#ui-layer > *{pointer-events:auto}
+
+.hidden{display:none !important}
+
+/* ---------- Menus ---------- */
+.menu{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,177,43,.08), transparent 60%),
+    linear-gradient(160deg,#1f1f1f,#141414 70%);
+}
+.menu-card{background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:34px 30px;width:360px;max-width:92vw;box-shadow:0 30px 80px rgba(0,0,0,.55);
+  backdrop-filter:blur(2px);animation:pop .25s ease}
+.menu-card.wide{width:760px}
+@keyframes pop{from{transform:translateY(12px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+
+.title{font-size:42px;letter-spacing:4px;text-align:center;margin-bottom:22px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;
+  background-clip:text;color:transparent;font-weight:800}
+h2{text-align:center;margin-bottom:18px;letter-spacing:2px;font-weight:700}
+
+label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+.hint{font-size:11px;color:var(--accent);margin-top:4px;font-style:italic}
+.muted{color:var(--muted);font-size:13px;text-align:center;padding:14px}
+
+input[type=text],input[type=number]{
+  width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--line);
+  background:#1c1c1c;color:#fff;font-size:16px;outline:none}
+input:focus{border-color:var(--accent)}
+
+/* Buttons */
+.btn{margin-top:12px;padding:13px;border-radius:12px;text-align:center;cursor:pointer;
+  background:#383838;border:1px solid var(--line);font-weight:600;letter-spacing:.5px;
+  transition:.15s;font-size:15px}
+.btn:hover{background:#444;transform:translateY(-1px)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;color:#1a1a1a}
+.btn-subtle{background:#2e2e2e}
+.btn-back{background:transparent;border-color:transparent;color:var(--muted);margin-top:18px}
+.btn-back:hover{color:#fff}
+
+/* Segmented control */
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg-opt{flex:1;text-align:center;padding:10px;cursor:pointer;background:#1c1c1c;font-size:14px}
+.seg-opt.active{background:var(--accent);color:#1a1a1a;font-weight:700}
+
+/* Code box */
+.code-box{padding:14px;text-align:center;font-family:Consolas,monospace;font-size:26px;
+  letter-spacing:6px;background:#1c1c1c;border:1px dashed var(--accent);border-radius:10px;
+  cursor:pointer;transition:.15s}
+.code-box:hover{background:#222}
+
+/* Room list */
+.room-list{max-height:300px;overflow-y:auto;margin-bottom:10px}
+.room-row{display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;border-radius:10px;background:#1c1c1c;margin-bottom:8px;cursor:pointer;
+  border:1px solid var(--line);transition:.15s}
+.room-row:hover{border-color:var(--accent)}
+.room-row .rn{font-weight:700}
+.room-row .rm{color:var(--muted);font-size:12px}
+
+/* Collections grid */
+.tank-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:10px}
+.tank-card{background:#1c1c1c;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.15s}
+.tank-card:hover{border-color:var(--accent)}
+.tank-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.tank-preview{height:60px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.tank-name{font-weight:700;font-size:14px}
+.tank-tier{font-size:11px;color:var(--accent);margin-top:2px}
+.tank-stats{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.4}
+
+/* Keybind rows */
+.bind-row{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--line)}
+.bind-row .bl{font-size:14px}
+.bind-key{min-width:90px;text-align:center;padding:8px;border-radius:8px;background:#1c1c1c;
+  border:1px solid var(--line);font-family:Consolas,monospace;cursor:pointer;transition:.15s;font-size:13px}
+.bind-key:hover{border-color:var(--accent)}
+.bind-key.binding{border-color:var(--accent2);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.5}}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;inset:0;pointer-events:none}
+#hud > *{pointer-events:auto}
+#minimap-btn{position:absolute;top:14px;left:14px;width:46px;height:46px;border-radius:10px;
+  background:rgba(20,20,20,.8);border:1px solid var(--line);display:flex;align-items:center;
+  justify-content:center;font-size:22px;cursor:pointer;backdrop-filter:blur(4px)}
+#minimap-btn:hover{background:rgba(40,40,40,.9)}
+
+#speed-readout{position:absolute;left:14px;bottom:14px;background:rgba(20,20,20,.75);
+  border:1px solid var(--line);border-radius:12px;padding:10px 16px;backdrop-filter:blur(4px)}
+#speed-readout span{font-size:28px;font-weight:800;color:var(--accent)}
+#speed-readout small{color:var(--muted);font-size:12px}
+
+#leaderboard{position:absolute;right:14px;top:14px;background:rgba(20,20,20,.78);
+  border:1px solid var(--line);border-radius:12px;padding:10px 14px;min-width:200px;backdrop-filter:blur(4px)}
+.lb-title{font-size:12px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase}
+#lb-list{list-style:none;counter-reset:lb}
+#lb-list li{display:flex;justify-content:space-between;font-size:13px;padding:2px 0}
+#lb-list li::before{counter-increment:lb;content:counter(lb) ". ";color:var(--accent);font-weight:700;width:18px}
+#lb-list li .lname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lb-list li .ldmg{color:var(--accent2);font-weight:700}
+
+#hp-wrap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  width:280px;height:14px;background:#1c1c1c;border:1px solid var(--line);border-radius:8px;
+  overflow:hidden}
+#hp-bar{height:100%;width:100%;background:linear-gradient(90deg,var(--ok),#9be23a);transition:width .15s}
+#hp-text{position:absolute;left:50%;bottom:32px;transform:translateX(-50%);
+  font-size:12px;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap;pointer-events:none}
+
+/* Camouflage indicator */
+#camo-indicator{position:absolute;left:50%;bottom:38px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;background:rgba(20,20,20,.85);border:1px solid var(--line);
+  border-radius:16px;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:.06em;
+  pointer-events:none;white-space:nowrap}
+#camo-dot{width:10px;height:10px;border-radius:50%;background:#888;transition:background .2s,box-shadow .2s}
+#camo-dot.on{background:#5fdc3a;box-shadow:0 0 8px #5fdc3a}
+#camo-dot.mid{background:#f0a020;box-shadow:0 0 8px #f0a020}
+#camo-dot.off{background:#666}
+#camo-text{color:#ddd;text-shadow:0 1px 2px #000}
+
+/* ---------- Big map ---------- */
+#bigmap{position:absolute;inset:0;background:rgba(0,0,0,.85);display:flex;
+  align-items:center;justify-content:center;z-index:30}
+#bigmap-canvas{max-width:90vw;max-height:90vh;border:2px solid var(--accent);border-radius:10px;background:#0c1a0c}
+#bigmap-close{position:absolute;top:20px;right:24px;width:42px;height:42px;border-radius:50%;
+  background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:20px;cursor:pointer;border:2px solid #fff;z-index:31}
+#bigmap-close:hover{transform:scale(1.08)}
+
+/* ---------- Toast ---------- */
+#toast{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);
+  background:#fff;color:#1a1a1a;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;
+  box-shadow:0 6px 20px rgba(0,0,0,.4);animation:fadeup 5s forwards}
+@keyframes fadeup{0%{opacity:0;transform:translate(-50%,10px)}10%,80%{opacity:1;transform:translateX(-50%)}100%{opacity:0}}
+
+/* Spinner */
+.spinner{width:36px;height:36px;border:4px solid #333;border-top-color:var(--accent);
+  border-radius:50%;margin:18px auto;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-thumb{background:#444;border-radius:4px}
+
+/* Separator */
+.sep{border:none;border-top:1px solid var(--line);margin:16px 0}
+
+/* Map choice (host) */
+.map-choice{display:flex;gap:8px}
+.map-opt{flex:1;text-align:center;padding:12px;border-radius:10px;background:#1c1c1c;
+  border:1px solid var(--line);cursor:pointer;font-size:13px;transition:.15s}
+.map-opt:hover{border-color:var(--accent)}
+.map-opt.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.map-opt small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.map-opt.disabled{opacity:.4;cursor:not-allowed}
+
+/* Range + color inputs */
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=color]{width:100%;height:38px;background:#1c1c1c;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+
+/* Drift hint */
+#drift-hint{position:absolute;left:50%;top:30%;transform:translateX(-50%);
+  font-size:34px;font-weight:800;letter-spacing:6px;color:var(--accent2);
+  text-shadow:0 0 18px rgba(255,91,59,.7);pointer-events:none;animation:driftpulse .4s infinite alternate}
+@keyframes driftpulse{to{transform:translateX(-50%) scale(1.08);opacity:.7}}
+
+/* ============ MAP EDITOR ============ */
+#editor-overlay{position:absolute;inset:0;z-index:40;background:#20242a}
+#editor-canvas-host{position:absolute;inset:0}
+#editor-canvas-host canvas{display:block}
+.ed-panel{position:absolute;background:rgba(28,30,34,.92);border:1px solid var(--line);
+  border-radius:12px;padding:12px;backdrop-filter:blur(4px);min-width:170px;font-size:13px;z-index:41}
+.ed-tl{top:14px;left:14px} .ed-tr{top:14px;right:14px}
+.ed-bl{bottom:14px;left:14px} .ed-br{bottom:14px;right:14px}
+.ed-title{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.ed-grid{display:flex;flex-direction:column;gap:6px}
+.ed-btn{background:#2c2f35;border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+  cursor:pointer;text-align:center;transition:.12s;font-size:13px;margin-top:0}
+.ed-btn:hover{background:#3a3f47;border-color:var(--accent)}
+.ed-btn.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:700}
+.ed-save{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#1a1a1a;border:none;font-weight:700}
+.ed-danger{background:#3a1f1f;border-color:#6a2a2a;color:#ff8080}
+.ed-danger:hover{background:#4a2828}
+.ed-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.ed-row span{min-width:42px;color:var(--muted);font-size:12px}
+.ed-row input[type=range]{flex:1}
+.ed-row input[type=color]{width:50px;height:30px}
+.ed-panel input[type=text]{width:100%;margin-top:6px;padding:8px;border-radius:8px;
+  background:#1c1c1c;border:1px solid var(--line);color:#fff}
+.insp-row{font-size:12px;color:#d0d0d0;padding:2px 0}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;margin-left:6px;font-weight:700}
+.tag-wall{background:#55585c;color:#fff}
+.tag-bush{background:#2c5a2a;color:#fff}
+.tag-water{background:#2a6f96;color:#fff}
+.ed-panel .muted{font-size:11px;line-height:1.5}
+
+/* ESC menu already uses .menu / .menu-card */
+
+
+</style>
+</head>
+<body>
+  <!-- 3D canvas mount -->
+  <div id="game-root"></div>
+
+  <!-- ============ OVERLAYS ============ -->
+  <div id="ui-layer">
+
+    <!-- MAIN MENU -->
+    <div class="menu" id="menu-main">
+      <div class="menu-card">
+        <h1 class="title">TANK&nbsp;PARTY</h1>
+        <div class="btn" data-open="singleplayer">Singleplayer</div>
+        <div class="btn" data-open="multiplayer">Multiplayer</div>
+        <div class="btn" data-open="collections">Collections</div>
+        <div class="btn" data-open="settings">Settings</div>
+        <div class="btn btn-subtle" data-open="editor">Map Editor</div>
+      </div>
+    </div>
+
+    <!-- MULTIPLAYER ROOT -->
+    <div class="menu hidden" id="menu-multiplayer">
+      <div class="menu-card">
+        <h2>Multiplayer</h2>
+        <div class="btn btn-primary" id="btn-host-room">Host Room</div>
+        <div class="btn" id="btn-join-room">Join Room</div>
+        <div class="btn btn-subtle" id="btn-join-hidden">Join Hidden Room</div>
+        <div class="btn btn-back" data-back="menu-main">â† Back</div>
+      </div>
+    </div>
+
+    <!-- HOST SETTINGS -->
+    <div class="menu hidden" id="menu-host">
+      <div class="menu-card">
+        <h2>Host Room</h2>
+        <label>Max Players (max 20)</label>
+        <input type="number" id="host-maxplayers" min="1" max="20" value="8">
+        <div class="hint">âš  Many players â†’ stronger device recommended</div>
+
+        <label>Visibility</label>
+        <div class="seg">
+          <div class="seg-opt active" data-vis="public">Public</div>
+          <div class="seg-opt" data-vis="hidden">Hidden</div>
+        </div>
+
+        <label>Max Fake Players (bots)</label>
+        <input type="number" id="host-fakeplayers" min="0" max="20" value="4">
+
+        <label>Map</label>
+        <div class="map-choice">
+          <div class="map-opt selected" id="host-map-big">Big Default Map</div>
+          <div class="map-opt" id="host-map-mine">My Map <small>(editor)</small></div>
+        </div>
+
+        <div id="host-code-row" class="hidden">
+          <label>Room Code (click to copy)</label>
+          <div class="code-box" id="host-code">--------</div>
+        </div>
+
+        <div class="btn btn-primary" id="btn-start-host">Start Hosting</div>
+        <div class="btn btn-back" data-back="menu-multiplayer">â† Back</div>
+      </div>
+    </div>
+
+    <!-- JOIN ROOM (public list) -->
+    <div class="menu hidden" id="menu-join">
+      <div class="menu-card wide">
+        <h2>Public Rooms</h2>
+        <div id="room-list" class="room-list"><div class="muted">Searching for public roomsâ€¦</div></div>
+        <div class="btn btn-back" data-back="menu-multiplayer">â† Back</div>
+      </div>
+    </div>
+
+    <!-- JOIN HIDDEN (paste code) -->
+    <div class="menu hidden" id="menu-join-hidden">
+      <div class="menu-card">
+        <h2>Join Hidden Room</h2>
+        <label>Paste Room Code</label>
+        <input type="text" id="hidden-code-input" placeholder="XXXXXXXX" maxlength="8">
+        <div class="btn btn-primary" id="btn-connect-hidden">Connect</div>
+        <div class="btn btn-back" data-back="menu-multiplayer">â† Back</div>
+      </div>
+    </div>
+
+    <!-- COLLECTIONS -->
+    <div class="menu hidden" id="menu-collections">
+      <div class="menu-card wide">
+        <h2>Collections</h2>
+        <div id="tank-grid" class="tank-grid"></div>
+        <div class="btn btn-back" data-back="menu-main">â† Back</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="menu hidden" id="menu-settings">
+      <div class="menu-card">
+        <h2>Settings</h2>
+        <div id="bind-list"></div>
+        <hr class="sep">
+        <div id="aim-settings"></div>
+        <hr class="sep">
+        <div id="view-settings"></div>
+        <div class="btn btn-back" data-back="menu-main">â† Back</div>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="minimap-btn" title="Open map">ðŸ—º</div>
+      <div id="speed-readout"><span id="speed-val">0</span> <small>km/h</small></div>
+      <div id="leaderboard">
+        <div class="lb-title">Leaderboard</div>
+        <ol id="lb-list"></ol>
+      </div>
+      <div id="hp-wrap"><div id="hp-bar"></div><span id="hp-text">100 / 100</span></div>
+      <div id="camo-indicator"><span id="camo-dot"></span><span id="camo-text">EXPOSED</span></div>
+      <div id="drift-hint" class="hidden">DRIFT</div>
+    </div>
+
+    <!-- FULLSCREEN MAP -->
+    <div id="bigmap" class="hidden">
+      <div id="bigmap-close" title="Close">âœ•</div>
+      <canvas id="bigmap-canvas"></canvas>
+    </div>
+
+    <!-- ESC MENU -->
+    <div id="esc-menu" class="menu hidden">
+      <div class="menu-card">
+        <h2>Exit to main menu?</h2>
+        <div class="hint" style="text-align:center;margin-bottom:8px">Are you sure you want to exit?</div>
+        <div class="btn btn-primary" id="esc-yes">Yes</div>
+        <div class="btn" id="esc-no">No</div>
+      </div>
+    </div>
+
+    <!-- MAP EDITOR -->
+    <div id="editor-overlay" class="hidden">
+      <div id="editor-canvas-host"></div>
+      <!-- TOP-LEFT: add figures -->
+      <div class="ed-panel ed-tl">
+        <div class="ed-title">Add Figure</div>
+        <div class="ed-grid">
+          <div class="ed-btn" id="ed-fig-cube">â¬› Cube</div>
+          <div class="ed-btn" id="ed-fig-pyramid">ðŸ”º Pyramid</div>
+          <div class="ed-btn" id="ed-fig-cone"> cone</div>
+          <div class="ed-btn" id="ed-fig-torus">ðŸ© Torus</div>
+          <div class="ed-btn" id="ed-fig-cylinder">ðŸ¥« Cylinder</div>
+        </div>
+      </div>
+      <!-- TOP-RIGHT: save/load/clear/back + hidden unlock -->
+      <div class="ed-panel ed-tr">
+        <div class="ed-title">Map</div>
+        <div class="ed-btn ed-save" id="ed-save">ðŸ’¾ Save</div>
+        <div class="ed-btn" id="ed-load">ðŸ“‚ Load</div>
+        <div class="ed-btn" id="ed-clear">ðŸ—‘ Clear</div>
+        <div class="ed-btn" id="ed-back">â† Back to Menu</div>
+        <hr class="sep">
+        <div class="ed-title">Promote to MAIN (hidden)</div>
+        <input type="text" id="ed-unlock-code" placeholder="unlock code" maxlength="20">
+        <div class="ed-btn" id="ed-unlock-go">Unlock</div>
+      </div>
+      <!-- BOTTOM-LEFT: transform + paint -->
+      <div class="ed-panel ed-bl">
+        <div class="ed-title">Transform</div>
+        <div class="ed-grid">
+          <div class="ed-btn active" id="ed-tool-move">âœ¥ Move</div>
+          <div class="ed-btn" id="ed-tool-scale">â¤¢ Scale</div>
+          <div class="ed-btn" id="ed-tool-rotate">âŸ³ Rotate</div>
+        </div>
+        <div class="ed-title" style="margin-top:8px">Paint</div>
+        <div class="ed-row"><span>Color</span><input type="color" id="ed-color" value="#8a8f98"></div>
+        <div class="ed-row"><span>Size</span><input type="range" id="ed-pencil-size" min="0.2" max="3" step="0.1" value="1"><span id="ed-pencil-size-val">1</span></div>
+      </div>
+      <!-- BOTTOM-RIGHT: type tag + inspector -->
+      <div class="ed-panel ed-br">
+        <div class="ed-title">Figure Type</div>
+        <div class="ed-grid">
+          <div class="ed-btn ed-type active" data-type="wall">ðŸ§± Wall/Rock</div>
+          <div class="ed-btn ed-type" data-type="bush">ðŸŒ¿ Bush/Tree</div>
+          <div class="ed-btn ed-type" data-type="water">ðŸ’§ Water</div>
+        </div>
+        <div class="ed-title" style="margin-top:8px">Inspector</div>
+        <div id="ed-inspector"><div class="muted">Click an object to edit it.<br>Left-drag empty space to orbit (or Shift+drag).</div></div>
+        <div class="ed-btn ed-danger" id="ed-delete" style="margin-top:8px">Delete (Del)</div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="hidden"></div>
+
+    <!-- Connecting overlay -->
+    <div id="connecting" class="menu hidden">
+      <div class="menu-card"><h2>Connectingâ€¦</h2><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+  <!-- Game -->
+  <script>
+// ===== ' + config + '.js =====
+/* ============================================================
+   config.js â€” game balance + world constants + tank roster
+   ============================================================ */
+
+const CONFIG = {
+  // World
+  WORLD_SIZE:      600,   // map is 600 x 600 units (very big)
+  GRID_DIVISIONS:  60,    // ground shader grid lines
+  TANK_Y:          1.2,   // all tanks drive at this Y (flat, like the reference)
+
+  // Camera (over-the-shoulder / angled top-down follow, see camera.js)
+  CAM_DIST_MIN:    12,
+  CAM_DIST_MAX:    40,
+  CAM_DIST:        22,    // default
+  CAM_HEIGHT:      16,
+  CAM_PITCH:       0.95,  // downward tilt factor
+  CAM_LERP:        0.14,
+  CAM_ZOOM_STEP:   2.5,
+
+  // Drift / handbrake
+  DRIFT_MIN_KMH:   35,    // need at least this speed to drift
+  DRIFT_TURN_BOOST:2.6,   // body turns this many times faster while drifting
+  DRIFT_FRICTION:  0.92,  // velocity retained per second while drifting (lower = longer slide)
+  U_TO_KMH:        3.6 * 0.6,
+
+  // Combat
+  SHELL_SPEED:     90,
+  SHELL_LIFE:      3.0,
+  FLAME_RANGE:     18,
+  FLAME_DPS:       0,
+
+  // Trajectory line (aim assist)
+  AIM_LINE_OPACITY: 0.5,
+  AIM_LINE_COLOR:   '#ffffff',
+
+  // View range circle (spotting)
+  VIEW_RANGE_OPACITY: 0.25,
+  VIEW_RANGE_COLOR:   '#ffffff',
+
+  // Camouflage
+  BUSH_HIDE_RADIUS:   3.2,   // a tank within this distance of a bush is hidden
+  TREE_HIDE_RADIUS:   4.0,   // tree canopy gives partial camo (less effective)
+
+  // Models
+  MODEL_DIR:   'mini_tank_legends_models/',
+  MODEL_EXT:   '.gltf',
+
+  // Networking
+  PEER_PREFIX:     'tankparty-v1-',
+};
+
+/* ---------- TANK ROSTER ----------
+   This pass: HP doubled, shell range halved, added `mass` (ram damage +
+   top-speed drag) and `viewRange` (spotting circle). Bush camo is global.
+*/
+const TANKS = {
+  /* 1. COOL BUDDY â€” balanced everything */
+  coolbuddy: {
+    id:'coolbuddy', name:'Cool Buddy', tier:1, collection:1,
+    color:0x8a8f98, turretColor:0xb9bfc9,
+    body:{ w:3.0, h:1.0, l:4.4 },
+    turret:{ w:1.8, h:0.8, l:2.4 },
+    barrelLen:1.6, barrelR:0.16,
+    hp:200, speed:22, turn:1.8,
+    turretTurn:2.4,
+    damage:34, reload:1.6, shellSpeed:90, shellRange:60,
+    accel:18, shellType:'shell',
+    mass:30, viewRange:70,
+    model:'coolbuddy', modelScale:1.0,
+    desc:'Balanced all-rounder.'
+  },
+
+  /* 2. HELIX â€” flamethrower, close range */
+  helix: {
+    id:'helix', name:'Helix', tier:2, collection:2,
+    color:0xb5482a, turretColor:0xd86a3a,
+    body:{ w:3.2, h:1.1, l:4.6 },
+    turret:{ w:2.0, h:0.9, l:2.4 },
+    barrelLen:1.2, barrelR:0.22,
+    hp:220, speed:21, turn:1.7,
+    turretTurn:2.6,
+    damage:7, reload:0.10, shellSpeed:42, shellRange:18,
+    accel:18, shellType:'flame',
+    mass:34, viewRange:55,
+    model:'helix', modelScale:1.0,
+    desc:'Flamethrower. Devastating up close.'
+  },
+
+  /* 3. STRIKER â€” low HP, fast long-range shell */
+  striker: {
+    id:'striker', name:'Striker', tier:2, collection:2,
+    color:0x3a6ea5, turretColor:0x5a93cf,
+    body:{ w:2.8, h:0.95, l:4.2 },
+    turret:{ w:1.7, h:0.75, l:2.6 },
+    barrelLen:2.2, barrelR:0.13,
+    hp:140, speed:23, turn:1.9,
+    turretTurn:2.8,
+    damage:30, reload:1.4, shellSpeed:140, shellRange:110,
+    accel:20, shellType:'shell',
+    mass:28, viewRange:90,
+    model:'striker', modelScale:1.0,
+    desc:'Glass cannon. Fast, long-range shells.'
+  },
+
+  /* 4. GHOST â€” small, very fast, low damage/hp, fast reload */
+  ghost: {
+    id:'ghost', name:'Ghost', tier:3, collection:3,
+    color:0x4a4f55, turretColor:0x6c7278,
+    body:{ w:2.3, h:0.85, l:3.6 },
+    turret:{ w:1.4, h:0.7, l:1.9 },
+    barrelLen:1.1, barrelR:0.11,
+    hp:120, speed:34, turn:2.6,
+    turretTurn:3.2,
+    damage:14, reload:0.45, shellSpeed:95, shellRange:65,
+    accel:30, shellType:'shell',
+    mass:18, viewRange:75,
+    model:'ghost', modelScale:1.0,
+    desc:'Tiny, fast, hit-and-run.'
+  },
+
+  /* 5. STURMRATTE â€” slow, huge HP, big shells, long reload. */
+  sturmratte: {
+    id:'sturmratte', name:'Sturmratte', tier:3, collection:3,
+    color:0x5a5648, turretColor:0x7d7a67,
+    body:{ w:4.0, h:1.4, l:5.8 },
+    turret:{ w:2.6, h:1.1, l:3.2 },
+    barrelLen:2.6, barrelR:0.24,
+    hp:440, speed:13, turn:1.0,
+    turretTurn:1.4,
+    damage:42, reload:4.2, shellSpeed:80, shellRange:80,
+    accel:10, shellType:'shell',
+    mass:60, viewRange:65,
+    model:'sturmratte', modelScale:1.0,
+    desc:'Juggernaut. Massive shells, very slow.'
+  },
+};
+
+const TANK_ORDER = ['coolbuddy','helix','striker','ghost','sturmratte'];
+
+/* Convert internal u/s to km/h for HUD */
+const U_TO_KMH = CONFIG.U_TO_KMH;
+
+/* World palette */
+const COLORS = {
+  grass1:0x2f3a1f, grass2:0x3a4824,
+  path:0x6b5132, pathDark:0x5a4329,
+  rock:0x55585c, rockDark:0x3c3e42,
+  bush:0x2c5a2a, treeTrunk:0x4a3320, treeLeaf:0x2e5d2a, treeLeaf2:0x356b30,
+  water1:0x1c4a6b, water2:0x2a6f96,
+  fog:0x1a1a1a,
+};
+
+/* Keybinds (rebindable in Settings) */
+const DEFAULT_BINDS = {
+  forward:  { key:'KeyW',  label:'Go Forward' },
+  backward: { key:'KeyS',  label:'Go Backward' },
+  left:     { key:'KeyA',  label:'Turn Left' },
+  right:    { key:'KeyD',  label:'Turn Right' },
+  fire:     { key:'LMB',   label:'Fire' },
+  handbrake:{ key:'Space', label:'Handbrake (Drift)' },
+  zoomIn:   { key:'WheelUp',   label:'Zoom In' },
+  zoomOut:  { key:'WheelDown', label:'Zoom Out' },
+};
+
+/* Persistent settings (localStorage) */
+function loadSettings(){
+  const defaults = () => Object.fromEntries(Object.keys(DEFAULT_BINDS).map(k=>[k,DEFAULT_BINDS[k].key]));
+  try{
+    const s = JSON.parse(localStorage.getItem('tankparty_settings')||'{}');
+    return {
+      binds: Object.assign(defaults(), s.binds||{}),
+      selectedTank: s.selectedTank || 'coolbuddy',
+      playerName: s.playerName || ('Player'+Math.floor(Math.random()*9000+1000)),
+      aimLineOpacity: (s.aimLineOpacity!=null? s.aimLineOpacity : CONFIG.AIM_LINE_OPACITY),
+      aimLineColor:   s.aimLineColor || CONFIG.AIM_LINE_COLOR,
+      viewRangeOpacity: (s.viewRangeOpacity!=null? s.viewRangeOpacity : CONFIG.VIEW_RANGE_OPACITY),
+      viewRangeColor:   s.viewRangeColor || CONFIG.VIEW_RANGE_COLOR,
+    };
+  }catch(e){
+    return {binds:defaults(), selectedTank:'coolbuddy', playerName:'Player'+Math.floor(Math.random()*9000+1000),
+            aimLineOpacity:CONFIG.AIM_LINE_OPACITY, aimLineColor:CONFIG.AIM_LINE_COLOR,
+            viewRangeOpacity:CONFIG.VIEW_RANGE_OPACITY, viewRangeColor:CONFIG.VIEW_RANGE_COLOR};
+  }
+}
+function saveSettings(s){ localStorage.setItem('tankparty_settings', JSON.stringify(s)); }
+
+/* ---------- Custom map (from editor) ---------- */
+function loadCustomMap(){
+  try{ return JSON.parse(localStorage.getItem('tankparty_custommap')||'null'); }catch(e){ return null; }
+}
+function saveCustomMap(map){ localStorage.setItem('tankparty_custommap', JSON.stringify(map)); }
+function hasCustomMap(){ return !!localStorage.getItem('tankparty_custommap'); }
+
+/* Hidden unlock code for custom-map-as-main feature.
+   Enter this in the Map Editor's hidden code box to promote your map to "main". */
+const MAP_UNLOCK_CODE = 'TANKMASTER';
+function isMapUnlocked(){ return localStorage.getItem('tankparty_mapunlocked')==='1'; }
+function setMapUnlocked(v){ localStorage.setItem('tankparty_mapunlocked', v?'1':'0'); }
+
+</script>
+  <script>
+// ===== ' + shaders + '.js =====
+/* ============================================================
+   shaders.js â€” GLSL: water (lakes), metallic tank, ground
+   ============================================================ */
+
+const SHADERS = {
+
+  /* ---- Animated water for lakes (fixed: no more half-disappear) ----
+     depthWrite:false + solid-ish opacity + fresnel so it reads as a
+     surface regardless of viewing angle. */
+  water: {
+    uniforms: {
+      uTime:    { value: 0 },
+      uColorA:  { value: new THREE.Color(0x17668f) },
+      uColorB:  { value: new THREE.Color(0x49c6e8) },
+      uDeep:    { value: new THREE.Color(0x0b2740) },
+    },
+    vertexShader: /*glsl*/`
+      uniform float uTime;
+      varying vec3 vWorld;
+      varying float vWave;
+      void main(){
+        vec3 p = position;
+        float w = sin((p.x*0.4) + uTime*1.6) * 0.10
+                + cos((p.z*0.5) + uTime*1.2) * 0.08;
+        p.y += w;
+        vWave = w;
+        vec4 wp = modelMatrix * vec4(p,1.0);
+        vWorld = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: /*glsl*/`
+      uniform float uTime;
+      uniform vec3 uColorA, uColorB, uDeep;
+      varying vec3 vWorld;
+      varying float vWave;
+      void main(){
+        float n = sin(vWorld.x*0.25 + uTime*0.8)
+                * sin(vWorld.z*0.25 - uTime*0.6);
+        n = smoothstep(-0.4, 0.6, n);
+        vec3 col = mix(uDeep, uColorA, n);
+        col = mix(col, uColorB, smoothstep(0.2,1.0,vWave+0.3));
+        float spec = pow(max(vWave,0.0), 6.0);
+        col += vec3(0.7,0.85,1.0)*spec*0.6;
+        gl_FragColor = vec4(col, 0.88);
+      }
+    `,
+  },
+
+  /* ---- Metallic tank shader (fresnel rim + panel sheen) ---- */
+  tank: {
+    uniforms: {
+      uTime:{value:0},
+      uColor:{value:new THREE.Color(0x8a8f98)},
+    },
+    vertexShader: /*glsl*/`
+      varying vec3 vNormal;
+      varying vec3 vWorld;
+      void main(){
+        vNormal = normalize(normalMatrix * normal);
+        vec4 wp = modelMatrix * vec4(position,1.0);
+        vWorld = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: /*glsl*/`
+      uniform vec3 uColor;
+      uniform float uTime;
+      varying vec3 vNormal;
+      varying vec3 vWorld;
+      void main(){
+        vec3 N = normalize(vNormal);
+        vec3 V = normalize(cameraPosition - vWorld);
+        vec3 L = normalize(vec3(0.5,1.0,0.3));
+        float diff = max(dot(N,L),0.0);
+        float fres = pow(1.0 - max(dot(N,V),0.0), 3.0);
+        vec3 base = uColor * (0.35 + 0.65*diff);
+        base += vec3(0.9,0.95,1.0) * fres * 0.5;
+        float line = step(0.93, fract(vWorld.x*0.5 + vWorld.z*0.5));
+        base *= (1.0 - line*0.25);
+        gl_FragColor = vec4(base, 1.0);
+      }
+    `,
+  },
+
+  /* ---- Ground (grass) shader ---- */
+  ground: {
+    uniforms: {
+      tMap:    { value: null },
+      uTime:   { value: 0 },
+      uFog:    { value: new THREE.Color(0x141414) },
+      uHalf:   { value: 300 },
+    },
+    vertexShader: /*glsl*/`
+      varying vec2 vUv;
+      varying vec3 vWorld;
+      void main(){
+        vUv = uv;
+        vec4 wp = modelMatrix * vec4(position,1.0);
+        vWorld = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: /*glsl*/`
+      uniform sampler2D tMap;
+      uniform float uTime, uHalf;
+      uniform vec3 uFog;
+      varying vec2 vUv;
+      varying vec3 vWorld;
+      float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+      void main(){
+        vec3 base = texture2D(tMap, vUv).rgb;
+        float dither = (hash(floor(vWorld.xz*2.0))-0.5)*0.04;
+        vec3 col = base + dither;
+        float dist = length(vWorld.xz) / uHalf;
+        float fog = smoothstep(0.6, 1.05, dist);
+        col = mix(col, uFog, fog*0.8);
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
+  },
+};
+
+</script>
+  <script>
+// ===== ' + models + '.js =====
+/* ============================================================
+   models.js â€” GLTF loader + cache. Tries to load the real tank
+   model from mini_tank_legends_models/<name>.gltf; if missing it
+   falls back to the cube body+turret. Uses Three.js GLTFLoader
+   (loaded via the addon script in index.html).
+   ============================================================ */
+
+const Models = {
+  _cache: {},        // key -> {gltf:Scene|null, tried:bool}
+  _loader: null,
+  _available: null,  // null = not yet probed
+
+  loader(){
+    if(!this._loader){
+      if(window.THREE && THREE.GLTFLoader){
+        this._loader = new THREE.GLTFLoader();
+      } else if(window.GLTFLoader){
+        this._loader = new GLTFLoader();
+      } else {
+        this._loader = null; // addon not present; cube fallback always
+      }
+    }
+    return this._loader;
+  },
+
+  /* Probe which model files exist. We can't list a dir from the
+     browser, so we HEAD each candidate URL once and cache the result. */
+  async probe(names){
+    const out = {};
+    await Promise.all(names.map(async n=>{
+      out[n] = await this._exists(CONFIG.MODEL_DIR + n + CONFIG.MODEL_EXT);
+    }));
+    this._available = out;
+    return out;
+  },
+
+  _exists(url){
+    return new Promise(res=>{
+      try{
+        const xhr = new XMLHttpRequest();
+        xhr.open('HEAD', url, true);
+        xhr.onload = ()=> res(xhr.status>=200 && xhr.status<300);
+      // Some servers don't allow HEAD; fall back to GET range
+        xhr.onerror = ()=> this._getProbe(url).then(res);
+        xhr.send();
+      }catch(e){ res(false); }
+    });
+  },
+  _getProbe(url){
+    return new Promise(res=>{
+      try{
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.onreadystatechange = ()=>{ if(xhr.readyState>=2){ res(xhr.status<400); xhr.abort(); } };
+        xhr.onerror = ()=> res(false);
+        xhr.send();
+      }catch(e){ res(false); }
+    });
+  },
+
+  hasModel(name){
+    return !!(this._available && this._available[name]);
+  },
+
+  /* Load a model async; returns a Promise<THREE.Group|null> */
+  load(name){
+    if(this._cache[name]) return Promise.resolve(this._cache[name].gltf && this._clone(name));
+    this._cache[name] = {gltf:null, tried:false};
+    const loader = this.loader();
+    if(!loader || !this.hasModel(name)){
+      this._cache[name].tried = true;
+      return Promise.resolve(null);
+    }
+    return new Promise(resolve=>{
+      loader.load(
+        CONFIG.MODEL_DIR + name + CONFIG.MODEL_EXT,
+        (gltf)=>{
+          this._cache[name].gltf = gltf.scene;
+          this._cache[name].tried = true;
+          resolve(this._clone(name));
+        },
+        undefined,
+        (err)=>{ this._cache[name].tried = true; resolve(null); }
+      );
+    });
+  },
+
+  _clone(name){
+    const src = this._cache[name].gltf;
+    if(!src) return null;
+    return src.clone(true);
+  },
+};
+
+</script>
+  <script>
+// ===== ' + world + '.js =====
+/* ============================================================
+   world.js â€” generates the big flat battlefield:
+     - grass ground (shaded)
+     - brown paths
+     - cube rock walls (hard cover, maze-like, ~half density)
+     - "christmas tree" trees from 4 figures (no hitbox)
+     - green cube bushes (no hitbox)
+     - lakes (drive-through, shoot-over, look distinct)
+   Tanks all drive on the same Y plane.
+   ============================================================ */
+
+class World {
+  constructor(scene){
+    this.scene = scene;
+    this.walls = [];        // {x,z,w,d, mesh} for collision (solid)
+    this.trees = [];
+    this.bushes = [];
+    this.lakes = [];        // visual + slow zone (no collision)
+    this.size = CONFIG.WORLD_SIZE;
+    this.half = this.size/2;
+    this._build();
+  }
+
+  _build(){
+    this._makeGround();
+    this._makeSkybox();
+    this._makeLights();
+    this._makeLakes();
+    this._makePaths();
+    this._makeWalls();
+    this._makeTrees();
+    this._makeBushes();
+    this._makeBorder();
+  }
+
+  /* ---------- Ground (textured shader) ---------- */
+  _makeGround(){
+    // procedural grass+path texture on a canvas (top-down map)
+    const c = document.createElement('canvas');
+    c.width = c.height = 1024;
+    const g = c.getContext('2d');
+    // base grass
+    g.fillStyle = '#33401f'; g.fillRect(0,0,1024,1024);
+    // grass patches
+    for(let i=0;i<2600;i++){
+      const x=Math.random()*1024, y=Math.random()*1024, r=4+Math.random()*22;
+      const tone = 30+Math.random()*40;
+      g.fillStyle = `rgba(${tone+10},${tone+50},${tone+10},${0.18+Math.random()*0.18})`;
+      g.beginPath(); g.arc(x,y,r,0,7); g.fill();
+    }
+    // a few brown paths (drawn as meandering strokes)
+    g.strokeStyle = '#5a4329'; g.lineWidth = 22; g.lineCap='round';
+    for(let p=0;p<5;p++){
+      g.beginPath();
+      let x=Math.random()*1024, y=Math.random()*1024;
+      g.moveTo(x,y);
+      for(let s=0;s<8;s++){ x += (Math.random()-0.5)*220; y += (Math.random()-0.5)*220;
+        g.lineTo(x,y); }
+      g.stroke();
+    }
+    // path speckle
+    for(let i=0;i<600;i++){
+      g.fillStyle = `rgba(${90+Math.random()*30},${67+Math.random()*20},${41+Math.random()*15},0.5)`;
+      g.fillRect(Math.random()*1024,Math.random()*1024,2,2);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(6,6);
+
+    const mat = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.clone(SHADERS.ground.uniforms),
+      vertexShader: SHADERS.ground.vertexShader,
+      fragmentShader: SHADERS.ground.fragmentShader,
+    });
+    mat.uniforms.tMap.value = tex;
+    mat.uniforms.uHalf.value = this.half;
+    this.groundMat = mat;
+    const geo = new THREE.PlaneGeometry(this.size, this.size, 1, 1);
+    geo.rotateX(-Math.PI/2);
+    this.ground = new THREE.Mesh(geo, mat);
+    this.scene.add(this.ground);
+  }
+
+  _makeSkybox(){
+    this.scene.background = new THREE.Color(COLORS.fog);
+    this.scene.fog = new THREE.Fog(COLORS.fog, 80, 340);
+  }
+
+  _makeLights(){
+    // Brighter sky/ground fill for a punchier look
+    const hemi = new THREE.HemisphereLight(0xdfeaff, 0x55502e, 1.15);
+    this.scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xfff4dc, 1.25);
+    sun.position.set(80,140,40);
+    this.scene.add(sun);
+    const amb = new THREE.AmbientLight(0x6a6a78, 0.7);
+    this.scene.add(amb);
+  }
+
+  /* ---------- Lakes (now ACT AS WALLS: cannot drive on, can shoot over) ----------
+     Water mesh is rendered solid (depthWrite true) so it never half-disappears. */
+  _makeLakes(){
+    const waterMat = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.clone(SHADERS.water.uniforms),
+      vertexShader: SHADERS.water.vertexShader,
+      fragmentShader: SHADERS.water.fragmentShader,
+      transparent:true,
+      depthWrite:true,     // write depth so it doesn't ghost in/out
+      side:THREE.DoubleSide,
+    });
+    this.waterMat = waterMat;
+
+    const lakeDefs = [
+      {x:-120, z:60,  r:42},
+      {x:140,  z:-90, r:55},
+      {x:-60,  z:-160,r:36},
+      {x:200,  z:160, r:48},
+      {x:-220, z:-40, r:30},
+    ];
+    lakeDefs.forEach(d=>{
+      const geo = new THREE.CircleGeometry(d.r, 48);
+      geo.rotateX(-Math.PI/2);
+      const m = new THREE.Mesh(geo, waterMat);   // shared material & time uniform
+      m.position.set(d.x, 0.15, d.z);            // a bit above ground to avoid z-fight
+      m.renderOrder = 1;
+      this.scene.add(m);
+      // dirt rim so lake reads against grass
+      const rim = new THREE.Mesh(
+        new THREE.RingGeometry(d.r*0.96, d.r*1.10, 40),
+        new THREE.MeshBasicMaterial({color:0x4a3a22, side:THREE.DoubleSide}));
+      rim.rotation.x = -Math.PI/2; rim.position.set(d.x,0.10,d.z);
+      this.scene.add(rim);
+      // register lake as a circular wall for collision (tanks can't enter)
+      this.lakes.push({x:d.x, z:d.z, r:d.r});
+      // also expose as a collidable for wall.collides() via a circle test
+      this._lakeColliders = this._lakeColliders || [];
+      this._lakeColliders.push({x:d.x, z:d.z, r:d.r});
+    });
+  }
+
+  /* ---------- Brown path strips (already on ground tex, add raised dirt roads too) ---------- */
+  _makePaths(){
+    // nothing extra needed; paths are part of ground texture
+  }
+
+  /* ---------- Cube rock walls (hard cover) ---------- */
+  _makeWalls(){
+    const rockMat = new THREE.MeshStandardMaterial({color:COLORS.rock, roughness:0.9, metalness:0.05, flatShading:true});
+    const rockMatD = new THREE.MeshStandardMaterial({color:COLORS.rockDark, roughness:0.95, flatShading:true});
+
+    // deterministic-ish layout: a loose maze with gaps. Half density of a real maze.
+    const cells = 12;          // grid cells per axis
+    const step = this.size / cells;
+    const wallH = 5;
+    // We lay wall segments along some grid lines but skip ~half to keep open play.
+    for(let i=0;i<=cells;i++){
+      for(let j=0;j<cells;j++){
+        if(Math.random()<0.32){
+          this._addWallSegment(
+            -this.half + i*step, -this.half + (j+0.5)*step,
+            step*0.78, 3, wallH, rockMat, rockMatD
+          );
+        }
+        if(Math.random()<0.32){
+          this._addWallSegment(
+            -this.half + (j+0.5)*step, -this.half + i*step,
+            3, step*0.78, wallH, rockMat, rockMatD
+          );
+        }
+      }
+    }
+    // a few big standalone "boulder" cubes for landmarks
+    for(let k=0;k<14;k++){
+      const s = 6+Math.random()*10;
+      const x=(Math.random()-0.5)*this.size*0.9, z=(Math.random()-0.5)*this.size*0.9;
+      if(this._inLake(x,z,6)) continue;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(s,s*1.1,s), rockMatD);
+      m.position.set(x, s*0.55, z); m.rotation.y = Math.random()*Math.PI;
+      m.castShadow = m.receiveShadow = true;
+      this.scene.add(m);
+      this.walls.push({x,z,w:s,d:s,mesh:m});
+    }
+  }
+
+  _addWallSegment(x, z, w, d, h, mat, matD){
+    if(this._inLake(x,z, Math.max(w,d))) return;
+    // avoid spawning too close to map border
+    if(Math.abs(x) > this.half-6 || Math.abs(z) > this.half-6) return;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, h/2, z);
+    m.castShadow = m.receiveShadow = true;
+    // darker base for grounding
+    const base = new THREE.Mesh(new THREE.BoxGeometry(w*1.04, 0.6, d*1.04), matD);
+    base.position.set(x, 0.3, z); base.receiveShadow = true;
+    this.scene.add(m); this.scene.add(base);
+    this.walls.push({x,z,w,d,mesh:m});
+  }
+
+  /* ---------- Christmas-tree trees (4 figures, no hitbox) ---------- */
+  _makeTrees(){
+    const trunkMat = new THREE.MeshStandardMaterial({color:COLORS.treeTrunk, roughness:1});
+    const leafMat  = new THREE.MeshStandardMaterial({color:COLORS.treeLeaf, roughness:0.9, flatShading:true});
+    const leafMat2 = new THREE.MeshStandardMaterial({color:COLORS.treeLeaf2, roughness:0.9, flatShading:true});
+
+    for(let i=0;i<160;i++){
+      const x=(Math.random()-0.5)*this.size*0.95, z=(Math.random()-0.5)*this.size*0.95;
+      if(this._inLake(x,z,4)) continue;
+      if(this._nearWall(x,z,5)) continue;
+      const tree = this._buildChristmasTree(trunkMat, leafMat, leafMat2);
+      tree.position.set(x, 0, z);
+      tree.rotation.y = Math.random()*Math.PI*2;
+      const s = 0.8+Math.random()*0.7;
+      tree.scale.setScalar(s);
+      this.scene.add(tree);
+      this.trees.push({x,z,mesh:tree});
+    }
+  }
+
+  _buildChristmasTree(trunkMat, leafMat, leafMat2){
+    const g = new THREE.Group();
+    // TALL trunk so a tank can hide beneath the canopy
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.55,6.0,7), trunkMat);
+    trunk.position.y = 3.0; trunk.castShadow = true; g.add(trunk);
+    // canopy (4 cones) sits up high, leaving a gap tanks drive into
+    const tiers = [
+      {y:5.6, r:3.2, h:2.6, m:leafMat},
+      {y:7.4, r:2.4, h:2.2, m:leafMat},
+      {y:9.0, r:1.7, h:1.9, m:leafMat2},
+      {y:10.4, r:0.9, h:1.4, m:leafMat2},
+    ];
+    tiers.forEach(t=>{
+      const c = new THREE.Mesh(new THREE.ConeGeometry(t.r, t.h, 8), t.m);
+      c.position.y = t.y; c.castShadow = true; g.add(c);
+    });
+    return g;
+  }
+
+  /* ---------- Bushes (green cubes, no hitbox) ---------- */
+  _makeBushes(){
+    const bushMat = new THREE.MeshStandardMaterial({color:COLORS.bush, roughness:1, flatShading:true});
+    for(let i=0;i<240;i++){
+      const x=(Math.random()-0.5)*this.size*0.95, z=(Math.random()-0.5)*this.size*0.95;
+      if(this._inLake(x,z,3)) continue;
+      const s = 1.2+Math.random()*1.8;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(s, s*0.9, s), bushMat);
+      m.position.set(x, s*0.45, z);
+      m.rotation.y = Math.random()*Math.PI;
+      m.castShadow = true; m.receiveShadow = true;
+      this.scene.add(m);
+      // hide radius is a bit bigger than the bush visual (per spec)
+      this.bushes.push({x,z,r:s*0.9+1.6,mesh:m});
+    }
+  }
+
+  /* ---------- Camouflage queries ---------- */
+  /* Returns 'bush' | 'tree' | null depending on what's hiding the tank. */
+  hidingIn(x, z){
+    for(const b of this.bushes){
+      if(Math.hypot(x-b.x, z-b.z) < (b.r||CONFIG.BUSH_HIDE_RADIUS)) return 'bush';
+    }
+    for(const t of this.trees){
+      if(Math.hypot(x-t.x, z-t.z) < CONFIG.TREE_HIDE_RADIUS) return 'tree';
+    }
+    return null;
+  }
+  /* Effective visibility multiplier: bush = fully hidden (0), tree = partial (0.5). */
+  camoFactor(x, z){
+    const h = this.hidingIn(x, z);
+    if(h==='bush') return 0;
+    if(h==='tree') return 0.5;
+    return 1;
+  }
+
+  /* ---------- Invisible border walls ---------- */
+  _makeBorder(){
+    const mat = new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:0});
+    const t = 6, h = 20;
+    const segs = [
+      {x:0, z: this.half, w:this.size, d:t},
+      {x:0, z:-this.half, w:this.size, d:t},
+      {x: this.half, z:0, w:t, d:this.size},
+      {x:-this.half, z:0, w:t, d:this.size},
+    ];
+    segs.forEach(s=>{
+      const m = new THREE.Mesh(new THREE.BoxGeometry(s.w,h,s.d), mat);
+      m.position.set(s.x,h/2,s.z);
+      this.scene.add(m);
+      this.walls.push({x:s.x,z:s.z,w:s.w,d:s.d,mesh:m,border:true});
+    });
+  }
+
+  /* ---------- Helpers ---------- */
+  _inLake(x,z,pad=0){
+    return this.lakes.some(l=> Math.hypot(x-l.x, z-l.z) < l.r+pad);
+  }
+  _nearWall(x,z,pad){
+    return this.walls.some(w=> Math.abs(x-w.x) < w.w/2+pad && Math.abs(z-w.z) < w.d/2+pad);
+  }
+
+  /* returns lake at point or null */
+  lakeAt(x,z){ return this.lakes.find(l=> Math.hypot(x-l.x, z-l.z) < l.r) || null; }
+
+  /* Collision test for a circle (tank) at (x,z) with radius r.
+     Walls block. Lakes ALSO block now (they act as walls) â€” but
+     shells still fly over them (handled in projectile.js). */
+  collides(x, z, r){
+    if(this.collidesWallsOnly(x, z, r)) return true;
+    const lakes = this._lakeColliders || this.lakes;
+    for(const l of lakes){
+      if(Math.hypot(x-l.x, z-l.z) < l.r + r) return true;
+    }
+    return false;
+  }
+
+  /* Walls only â€” used by shells so they fly OVER lakes. */
+  collidesWallsOnly(x, z, r){
+    for(const w of this.walls){
+      const hx = w.w/2 + r, hz = w.d/2 + r;
+      if(Math.abs(x-w.x) < hx && Math.abs(z-w.z) < hz) return true;
+    }
+    return false;
+  }
+
+  /* Find a valid spawn (not inside wall/lake) */
+  randomSpawn(){
+    for(let tries=0; tries<200; tries++){
+      const x = (Math.random()-0.5)*this.size*0.9;
+      const z = (Math.random()-0.5)*this.size*0.9;
+      if(this._inLake(x,z,4)) continue;
+      if(this.collides(x,z,3)) continue;
+      return {x,z};
+    }
+    return {x:0,z:0};
+  }
+
+  /* Load a custom map from the editor. Objects tagged by type:
+     'water'  -> lake-like surface + circular/box collider (can't drive on, shoot over)
+     'bush'   -> decor only (no collision)
+     'wall'   -> solid rock collider + mesh
+  */
+  loadCustomMapData(data){
+    if(!data || !data.objects) return;
+    const rockMat = new THREE.MeshStandardMaterial({color:COLORS.rock, roughness:0.9, metalness:0.05, flatShading:true});
+    const bushMat = new THREE.MeshStandardMaterial({color:COLORS.bush, roughness:1, flatShading:true});
+    data.objects.forEach(d=>{
+      let geo;
+      switch(d.kind){
+        case 'cube':     geo = new THREE.BoxGeometry(6,6,6); break;
+        case 'pyramid':  geo = new THREE.ConeGeometry(4,7,4); break;
+        case 'cone':     geo = new THREE.ConeGeometry(3.5,7,18); break;
+        case 'torus':    geo = new THREE.TorusGeometry(3,1.2,12,24); break;
+        case 'cylinder': geo = new THREE.CylinderGeometry(3,3,6,18); break;
+        default: geo = new THREE.BoxGeometry(6,6,6);
+      }
+      const mat = (d.type==='water') ? new THREE.MeshBasicMaterial({color:d.color||0x2a6f96, transparent:true, opacity:0.85})
+                 : new THREE.MeshStandardMaterial({color:d.color||0x888888, roughness:0.8, flatShading:true});
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(d.x, d.y, d.z);
+      mesh.scale.set(d.sx, d.sy, d.sz);
+      mesh.rotation.y = d.ry;
+      mesh.castShadow = mesh.receiveShadow = true;
+      this.scene.add(mesh);
+
+      if(d.type==='water'){
+        // register a collider (use bounding radius ~ max scale*3)
+        const r = Math.max(d.sx, d.sz)*3;
+        this._lakeColliders = this._lakeColliders || [];
+        this._lakeColliders.push({x:d.x, z:d.z, r});
+        this.lakes.push({x:d.x, z:d.z, r});
+      } else if(d.type==='bush'){
+        this.bushes.push({x:d.x, z:d.z, mesh});
+      } else { // wall
+        const w = 6*d.sx, dd = 6*d.sz;
+        this.walls.push({x:d.x, z:d.z, w, d:dd, mesh});
+      }
+    });
+  }
+
+  /* Clear custom-map-added objects (so re-entering arena doesn't stack). */
+  clearCustomMapData(){
+    // simplest: rebuild world; for prototype we just clear the arrays we filled.
+    // Walls/lakes/bushes also contain the procedural ones, so we only remove
+    // those tagged via custom (they have .mesh.userData.isCustom). We mark them.
+  }
+
+  update(dt, time){
+    if(this.waterMat) this.waterMat.uniforms.uTime.value = time;
+    if(this.groundMat) this.groundMat.uniforms.uTime.value = time;
+  }
+
+  /* render the whole map to a 2D canvas for the minimap/fullscreen map */
+  renderToCanvas(ctx, w, h, opts={}){
+    const scale = w / this.size;
+    const ox = w/2, oy = h/2;
+    const toPx = (x,z)=> [ox + x*scale, oy + z*scale];
+
+    // ground
+    ctx.fillStyle = '#33401f'; ctx.fillRect(0,0,w,h);
+    // paths-ish tint
+    ctx.fillStyle = 'rgba(90,67,41,0.15)'; ctx.fillRect(0,0,w,h);
+
+    // lakes
+    this.lakes.forEach(l=>{
+      const [px,py] = toPx(l.x,l.z);
+      ctx.fillStyle = '#2a6f96';
+      ctx.beginPath(); ctx.arc(px,py, l.r*scale, 0, 7); ctx.fill();
+    });
+    // walls
+    ctx.fillStyle = '#55585c';
+    this.walls.forEach(wl=>{
+      if(wl.border) return;
+      ctx.fillRect(ox+(wl.x-wl.w/2)*scale, oy+(wl.z-wl.d/2)*scale, wl.w*scale, wl.d*scale);
+    });
+    // trees (dots)
+    ctx.fillStyle = '#2e5d2a';
+    this.trees.forEach(t=>{
+      const [px,py] = toPx(t.x,t.z);
+      ctx.fillRect(px-1, py-1, 2, 2);
+    });
+    // border
+    ctx.strokeStyle='#888'; ctx.lineWidth=2;
+    ctx.strokeRect(1,1,w-2,h-2);
+  }
+
+  worldToMap(x, z, canvasSize){
+    const scale = canvasSize / this.size;
+    return [canvasSize/2 + x*scale, canvasSize/2 + z*scale];
+  }
+}
+
+</script>
+  <script>
+// ===== ' + tank + '.js =====
+/* ============================================================
+   tank.js â€” Tank entity: BODY + TURRET groups (so we always know
+   which is which). Billboard HP bar/name (face camera, not gun).
+   Camouflage in bushes/trees. View-range circle. Box collider +
+   mass (ram damage). Full death sequence: turret launches, body
+   blackens + burns, 8-point star decal, sinks after 5s.
+   ============================================================ */
+
+class Tank {
+  constructor(def, opts={}){
+    this.def = def;
+    this.id   = opts.id   || ('tank_'+Math.random().toString(36).slice(2,8));
+    this.name = opts.name || 'Tank';
+    this.isLocal = !!opts.isLocal;
+    this.isBot   = !!opts.isBot;
+    this.color   = opts.color != null ? opts.color : def.color;
+    this.ownerPeer = opts.ownerPeer || null;
+
+    // transform
+    this.x = opts.x || 0;
+    this.z = opts.z || 0;
+    this.heading = opts.heading || 0;
+    this.turretAngle = opts.turretAngle || 0;
+    this.speed = 0;
+    this.vx = 0; this.vz = 0;
+    this.drifting = false;
+
+    // stats
+    this.maxHp = def.hp; this.hp = this.maxHp;
+    this.mass  = def.mass || 30;
+    this.viewRange = def.viewRange || 70;
+    this.alive = true; this.respawnAt = 0;
+    this.damageDealt = 0; this.kills = 0;
+    this.reloadLeft = 0;
+
+    // camo
+    this.camoState = null;     // 'bush' | 'tree' | null
+    this.camoFactor = 1;       // 1 visible, 0 hidden
+
+    // death animation
+    this.dying = false;        // playing death sequence
+    this.deathT = 0;           // elapsed death time
+    this.removeAt = -1;        // when to fully remove (-1 = manual)
+
+    // collider half-extents (box)
+    this.colHalfW = def.body.w*0.55;
+    this.colHalfL = def.body.l*0.55;
+
+    this._buildCubeMesh();
+    if(Models && Models.hasModel(def.model||def.id)) this._loadModel();
+  }
+
+  /* ---------- Mesh ---------- */
+  _buildCubeMesh(){
+    this.bodyGroup = new THREE.Group();
+    const b = this.def.body;
+    this.bodyMat = this._tankMat(this.color);
+    this.bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.l), this.bodyMat);
+    this.bodyMesh.position.y = b.h/2 + 0.45;
+    this.bodyGroup.add(this.bodyMesh);
+
+    const treadMat = new THREE.MeshStandardMaterial({color:0x222226, roughness:1});
+    [-1,1].forEach(s=>{
+      const t = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, b.l+0.2), treadMat);
+      t.position.set(s*(b.w/2+0.05), 0.35, 0);
+      this.bodyGroup.add(t);
+    });
+
+    this.turretGroup = new THREE.Group();
+    const t = this.def.turret;
+    this.turretMat = this._tankMat(this.def.turretColor);
+    this.turretMesh = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.l), this.turretMat);
+    this.turretMesh.position.y = t.h/2;
+    this.turretGroup.add(this.turretMesh);
+
+    const barrelMat = new THREE.MeshStandardMaterial({color:0x2a2a2e, roughness:0.4, metalness:0.6});
+    const bl = this.def.barrelLen, br = this.def.barrelR;
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(br, br, bl, 10), barrelMat);
+    barrel.rotation.x = Math.PI/2;
+    barrel.position.set(0, t.h*0.4, t.l/2 + bl/2);
+    this.turretGroup.add(barrel);
+    this.barrelEnd = new THREE.Object3D();
+    this.barrelEnd.position.set(0, t.h*0.4, t.l/2 + bl + 0.2);
+    this.turretGroup.add(this.barrelEnd);
+
+    this.root = new THREE.Group();
+    this.root.add(this.bodyGroup);
+    this.root.add(this.turretGroup);
+    this._addOverlays(t.h);
+    this._syncTransform();
+  }
+
+  _tankMat(color){
+    return new THREE.MeshStandardMaterial({color, roughness:0.45, metalness:0.55, flatShading:false});
+  }
+
+  _loadModel(){
+    Models.load(this.def.model||this.def.id).then(grp=>{
+      if(!grp) return;
+      this._clearGroup(this.bodyGroup);
+      this._clearGroup(this.turretGroup);
+      const scale = this.def.modelScale || 1.0;
+      grp.scale.setScalar(scale);
+      grp.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; } });
+      this.bodyGroup.add(grp);
+      const t = this.def.turret;
+      this.barrelEnd = new THREE.Object3D();
+      this.barrelEnd.position.set(0, t.h*0.6, t.l + this.def.barrelLen);
+      this.turretGroup.add(this.barrelEnd);
+      this._addOverlays(t.h);
+      this._syncTransform();
+    });
+  }
+
+  _clearGroup(g){
+    for(let i=g.children.length-1;i>=0;i--){
+      const c = g.children[i];
+      if(c.userData && c.userData.isOverlay) continue;
+      g.remove(c);
+    }
+  }
+
+  _addOverlays(turretH){
+    // Billboard HP bar (sprite faces camera automatically)
+    this.hpSprite = this._makeHpSprite();
+    this.hpSprite.userData.isOverlay = true;
+    this.hpSprite.position.y = turretH + 2.0;
+    this.root.add(this.hpSprite);              // on root so it doesn't spin with turret
+
+    this.nameSprite = this._makeNameTag(this.name);
+    this.nameSprite.userData.isOverlay = true;
+    this.nameSprite.position.y = turretH + 2.8;
+    this.root.add(this.nameSprite);
+  }
+
+  _makeHpSprite(){
+    const c = document.createElement('canvas'); c.width=256; c.height=40;
+    this._hpCanvas = c; this._hpCtx = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c);
+    this._hpTex = tex;
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true}));
+    spr.scale.set(3.4, 0.53, 1);
+    this._drawHp();
+    return spr;
+  }
+  _drawHp(){
+    const c=this._hpCanvas, g=this._hpCtx;
+    g.clearRect(0,0,256,40);
+    const pct = Math.max(0, this.hp/this.maxHp);
+    g.fillStyle='rgba(0,0,0,0.6)'; g.fillRect(8,10,240,20);
+    const col = pct>0.6?'#3ad17a':(pct>0.3?'#ffb12b':'#ff3b3b');
+    g.fillStyle=col; g.fillRect(11,13,234*pct,14);
+    if(this._hpTex) this._hpTex.needsUpdate=true;
+  }
+
+  _makeNameTag(text){
+    const c = document.createElement('canvas'); c.width=256; c.height=64;
+    const g = c.getContext('2d');
+    g.fillStyle='rgba(0,0,0,0.5)'; g.fillRect(0,18,256,30);
+    g.font='bold 22px Segoe UI'; g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillText(text, 128, 33);
+    const tex = new THREE.CanvasTexture(c);
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true}));
+    spr.scale.set(3.2, 0.8, 1);
+    return spr;
+  }
+
+  attach(scene){ scene.add(this.root); this.scene = scene; }
+  detach(){ if(this.scene){ this.scene.remove(this.root); this.scene=null; } }
+
+  /* ---------- View range circle ---------- */
+  makeViewRangeCircle(){
+    const geo = new THREE.RingGeometry(this.viewRange-0.15, this.viewRange, 64);
+    geo.rotateX(-Math.PI/2);
+    const mat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.25, side:THREE.DoubleSide, depthWrite:false});
+    this.viewCircle = new THREE.Mesh(geo, mat);
+    this.viewCircle.position.y = 0.2;
+    this.root.add(this.viewCircle);
+    return this.viewCircle;
+  }
+  setViewRangeStyle(opacity, color){
+    if(!this.viewCircle) return;
+    this.viewCircle.material.opacity = opacity;
+    this.viewCircle.material.color.set(color);
+  }
+
+  /* ---------- Movement / Drift ---------- */
+  setInput(input){ this._input = input; }
+
+  update(dt, world, game){
+    // ---- death animation ----
+    if(this.dying){
+      this._updateDeath(dt, game);
+      return;
+    }
+    if(!this.alive){
+      // alive=false but not yet dying -> should not normally happen (death starts immediately)
+      return;
+    }
+    const d = this.def;
+    const inp = this._input || {};
+
+    // camo update
+    this.camoState = world.hidingIn(this.x, this.z);
+    this.camoFactor = world.camoFactor(this.x, this.z);
+    // hidden tanks are visually faded
+    this._applyCamoVisual();
+
+    // throttle -> desired speed (mass adds drag to top speed)
+    const speedCap = d.speed * (1 - Math.min(0.35, (this.mass-18)/120));
+    const target = (inp.throttle||0) * speedCap;
+    if(this.speed < target) this.speed = Math.min(target, this.speed + d.accel*dt);
+    else if(this.speed > target) this.speed = Math.max(target, this.speed - d.accel*dt*1.4);
+
+    const kmh = Math.abs(this.speed) * CONFIG.U_TO_KMH;
+
+    this.drifting = false;
+    if(inp.handbrake && kmh >= CONFIG.DRIFT_MIN_KMH && inp.turn){
+      this.drifting = true;
+      this.heading += inp.turn * d.turn * CONFIG.DRIFT_TURN_BOOST * dt;
+      if(this.vx === 0 && this.vz === 0){
+        this.vx = Math.sin(this.heading) * this.speed;
+        this.vz = Math.cos(this.heading) * this.speed;
+      }
+      this.speed *= (1 - 0.15*dt);
+    }
+    if(!this.drifting && inp.turn) this.heading += inp.turn * d.turn * dt;
+
+    let fx = Math.sin(this.heading) * this.speed;
+    let fz = Math.cos(this.heading) * this.speed;
+    this.vx += (fx - this.vx) * Math.min(1, (this.drifting?0.2:3.0)*dt);
+    this.vz += (fz - this.vz) * Math.min(1, (this.drifting?0.2:3.0)*dt);
+
+    let nx = this.x + this.vx * dt;
+    let nz = this.z + this.vz * dt;
+
+    if(world.lakeAt(nx, nz)){
+      nx = this.x; nz = this.z;
+      this.speed *= 0.3; this.vx *= 0.3; this.vz *= 0.3;
+    }
+
+    const r = Math.max(this.colHalfW, this.colHalfL);
+    if(!world.collides(nx, this.z, r)) this.x = nx;
+    else { this.speed *= 0.5; this.vx *= 0.4; }
+    if(!world.collides(this.x, nz, r)) this.z = nz;
+    else { this.speed *= 0.5; this.vz *= 0.4; }
+
+    // ---- tank-vs-tank ram (box overlap, mass-based damage) ----
+    if(game) this._ramCheck(game);
+
+    const lim = world.half - 3;
+    this.x = Math.max(-lim, Math.min(lim, this.x));
+    this.z = Math.max(-lim, Math.min(lim, this.z));
+
+    if(inp.turretWorldAngle != null){
+      let diff = ((inp.turretWorldAngle - this.turretAngle + Math.PI) % (Math.PI*2)) - Math.PI;
+      const maxStep = d.turretTurn * dt;
+      diff = Math.max(-maxStep, Math.min(maxStep, diff));
+      this.turretAngle += diff;
+    }
+
+    if(this.reloadLeft > 0) this.reloadLeft -= dt;
+    if(inp.fire && this.reloadLeft <= 0){
+      this.reloadLeft = d.reload;
+      if(game) game.spawnShot(this);
+    }
+
+    this._syncTransform();
+  }
+
+  _applyCamoVisual(){
+    const op = this.camoFactor; // 1 = fully visible
+    // fade overlays + body a bit when hidden
+    if(this.hpSprite) this.hpSprite.material.opacity = op;
+    if(this.nameSprite) this.nameSprite.material.opacity = op;
+  }
+
+  _ramCheck(game){
+    for(const o of game.tanks){
+      if(o===this || !o.alive || o.dying) continue;
+      const dx = o.x - this.x, dz = o.z - this.z;
+      const overlapX = (this.colHalfW + o.colHalfW) - Math.abs(dx);
+      const overlapZ = (this.colHalfL + o.colHalfL) - Math.abs(dz);
+      if(overlapX>0 && overlapZ>0){
+        // separate along smallest overlap
+        if(overlapX < overlapZ){
+          const push = overlapX/2 * (dx<0?1:-1);
+          this.x -= push; o.x += push;
+        } else {
+          const push = overlapZ/2 * (dz<0?1:-1);
+          this.z -= push; o.z += push;
+        }
+        // ram damage based on closing speed & mass difference
+        const rel = Math.abs(this.speed) + Math.abs(o.speed);
+        if(rel > 8){
+          const heavier = this.mass >= o.mass ? this : o;
+          const lighter = heavier === this ? o : this;
+          const dmg = Math.min(40, rel * 0.5 * (heavier.mass/lighter.mass) * 0.3);
+          lighter.takeDamage(dmg, heavier, game);
+        }
+        this.speed *= 0.6; this.vx *= 0.5; this.vz *= 0.5;
+      }
+    }
+  }
+
+  _syncTransform(){
+    this.root.position.set(this.x, 0, this.z);
+    this.bodyGroup.rotation.y = this.heading;
+    this.turretGroup.rotation.y = this.turretAngle;
+    this.turretGroup.position.y = this.def.body.h + 0.45;
+    if(this.drifting){
+      this.bodyGroup.rotation.z = THREE.MathUtils.lerp(this.bodyGroup.rotation.z, -0.08, 0.2);
+    } else {
+      this.bodyGroup.rotation.z = THREE.MathUtils.lerp(this.bodyGroup.rotation.z, 0, 0.2);
+    }
+  }
+
+  /* ---------- Combat ---------- */
+  takeDamage(amount, fromTank, game){
+    if(!this.alive || this.dying) return;
+    this.hp -= amount;
+    if(fromTank && fromTank !== this) fromTank.damageDealt += amount;
+    if(this.hp <= 0){
+      this.hp = 0; this.alive = false;
+      if(fromTank && fromTank !== this) fromTank.kills++;
+      this._startDeath(game, fromTank);
+    }
+    this._drawHp();
+  }
+  heal(amount){ this.hp = Math.min(this.maxHp, this.hp + amount); this._drawHp(); }
+
+  /* ---------- Death sequence ---------- */
+  _startDeath(game, killer){
+    this.dying = true; this.deathT = 0;
+    this.removeAt = (game? game.time : 0) + 9;   // sink finishes ~5s after burn starts
+    // hide overlays
+    if(this.hpSprite) this.hpSprite.visible = false;
+    if(this.nameSprite) this.nameSprite.visible = false;
+    if(this.viewCircle) this.viewCircle.visible = false;
+
+    // 1) TURRET launches up immediately (impulse + gravity + spin)
+    this._turretVel = new THREE.Vector3(
+      (Math.random()-0.5)*4, 14 + Math.random()*4, (Math.random()-0.5)*4);
+    this._turretSpin = new THREE.Vector3((Math.random()-0.5)*4,(Math.random()-0.5)*6,(Math.random()-0.5)*4);
+
+    // 2) BODY blackens
+    if(this.bodyMat){ this.bodyMat.color.setHex(0x141414); this.bodyMat.emissive=new THREE.Color(0x3a1500); this.bodyMat.emissiveIntensity=0.6; }
+
+    // 3) fire particles (attach to root, updated in _updateDeath)
+    this._firePts = this._makeFireParticles();
+    this.root.add(this._firePts);
+
+    // 4) eight-pointed black star decal on ground
+    this._star = this._makeStarDecal();
+    this._star.position.set(0, 0.25, 0);
+    this.root.add(this._star);
+
+    if(game) game.onTankKilled(this, killer);
+  }
+
+  _makeFireParticles(){
+    const g = new THREE.Group();
+    const cols=[0xffd24a,0xff7a1a,0xff3b1a,0x6a2a00];
+    for(let i=0;i<18;i++){
+      const m=new THREE.Mesh(new THREE.SphereGeometry(0.4+Math.random()*0.5,6,6),
+        new THREE.MeshBasicMaterial({color:cols[i%4],transparent:true,opacity:0.9}));
+      m.position.set((Math.random()-0.5)*2, 0.5+Math.random()*1.5, (Math.random()-0.5)*2);
+      m.userData.baseY=m.position.y;
+      m.userData.phase=Math.random()*6.28;
+      g.add(m);
+    }
+    return g;
+  }
+
+  _makeStarDecal(){
+    // 8-pointed star (two overlapping squares) as a flat shape on the ground
+    const shape = new THREE.Shape();
+    const spikes=8, outer=3.4, inner=1.2;
+    for(let i=0;i<spikes*2;i++){
+      const r = (i%2===0)?outer:inner;
+      const a = (i/(spikes*2))*Math.PI*2;
+      const px=Math.cos(a)*r, py=Math.sin(a)*r;
+      if(i===0) shape.moveTo(px,py); else shape.lineTo(px,py);
+    }
+    shape.closePath();
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(-Math.PI/2);
+    return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:0.8, depthWrite:false}));
+  }
+
+  _updateDeath(dt, game){
+    this.deathT += dt;
+
+    // turret ballistic
+    if(this._turretVel){
+      this.turretGroup.position.x += this._turretVel.x*dt;
+      this.turretGroup.position.y += this._turretVel.y*dt;
+      this.turretGroup.position.z += this._turretVel.z*dt;
+      this._turretVel.y -= 22*dt;            // gravity
+      this.turretGroup.rotation.x += this._turretSpin.x*dt;
+      this.turretGroup.rotation.z += this._turretSpin.z*dt;
+      // when it lands, stop bouncing
+      if(this.turretGroup.position.y <= this.def.body.h+0.45 && this._turretVel.y<0){
+        this.turretGroup.position.y = this.def.body.h+0.45;
+        this._turretVel.y *= -0.3;
+        this._turretVel.x *= 0.5; this._turretVel.z *= 0.5;
+        if(Math.abs(this._turretVel.y)<1){ this._turretVel=null; }
+      }
+    }
+
+    // fire flicker
+    if(this._firePts){
+      this._firePts.children.forEach(p=>{
+        p.position.y = p.userData.baseY + Math.sin(game.time*8+p.userData.phase)*0.3;
+        p.scale.setScalar(1+Math.sin(game.time*10+p.userData.phase)*0.2);
+      });
+    }
+
+    // after 5s, start sinking + fade star + fire
+    if(this.deathT > 5){
+      const sink = (this.deathT-5);
+      this.root.position.y = -sink*1.2;
+      if(this._star){ this._star.material.opacity = Math.max(0, 0.8 - sink*0.4); }
+      if(this._firePts){ this._firePts.children.forEach(p=>{ p.material.opacity=Math.max(0,0.9-sink*0.5); }); }
+    }
+
+    // fully removed
+    if(this.deathT > 8){
+      this.root.visible = false;
+      if(game && this.isLocal && !this._notifiedDeath){
+        this._notifiedDeath = true;
+        // per spec: when local tank dies -> go to main menu
+        game.onLocalDeath();
+      }
+    }
+  }
+
+  respawn(world, game){
+    const sp = world.randomSpawn();
+    this.x = sp.x; this.z = sp.z;
+    this.heading = Math.random()*Math.PI*2;
+    this.turretAngle = this.heading;
+    this.hp = this.maxHp; this.alive = true;
+    this.dying = false; this.deathT = 0;
+    this.speed = 0; this.vx = 0; this.vz = 0; this.reloadLeft = 0;
+    this.root.visible = true;
+    this.root.position.y = 0;
+    if(this.hpSprite) this.hpSprite.visible = true;
+    if(this.nameSprite) this.nameSprite.visible = true;
+    if(this.viewCircle) this.viewCircle.visible = true;
+    this._drawHp();
+  }
+
+  _updateHpBar(){ this._drawHp(); }
+
+  muzzle(){
+    const p = new THREE.Vector3();
+    this.barrelEnd.getWorldPosition(p);
+    const dir = new THREE.Vector3(Math.sin(this.turretAngle), 0, Math.cos(this.turretAngle));
+    return {pos:p, dir};
+  }
+
+  snapshot(){
+    return {
+      id:this.id, x:this.x, z:this.z, h:this.heading, t:this.turretAngle,
+      sp:this.speed, hp:this.hp, alive:this.alive, dying:this.dying,
+      dd:this.damageDealt, k:this.kills, tank:this.def.id, name:this.name, col:this.color,
+    };
+  }
+  applySnapshot(s){
+    this.x=s.x; this.z=s.z; this.heading=s.h; this.turretAngle=s.t;
+    this.speed=s.sp; this.hp=s.hp; this.alive=s.alive;
+    this.damageDealt=s.dd; this.kills=s.k;
+    this.root.visible=this.alive; this._syncTransform(); this._drawHp();
+  }
+  applyPartialSnapshot(s){
+    this.x += (s.x - this.x)*0.3;
+    this.z += (s.z - this.z)*0.3;
+    this.heading = s.h; this.turretAngle = s.t;
+    this.hp = s.hp; this.alive=s.alive;
+    this.damageDealt=s.dd; this.kills=s.k;
+    this.root.visible=this.alive; this._syncTransform(); this._drawHp();
+  }
+}
+
+</script>
+  <script>
+// ===== ' + projectile + '.js =====
+/* ============================================================
+   projectile.js â€” Shells + Helix flamethrower particles
+   - Shell: travels, blocked by walls; flies OVER lakes (per spec)
+   - Flame: short-lived particles, DPS at close range
+   ============================================================ */
+
+class Shell {
+  constructor(owner, pos, dir, def){
+    this.owner = owner;
+    this.x = pos.x; this.y = pos.y; this.z = pos.z;
+    this.dir = dir.clone().normalize();
+    this.speed = def.shellSpeed;
+    this.damage = def.damage;
+    this.life = def.shellRange / def.shellSpeed; // distance-based life
+    this.dead = false;
+    this.type = 'shell';
+    this.radius = 0.4;
+    this._build();
+  }
+
+  _build(){
+    const mat = new THREE.MeshStandardMaterial({color:0xffd24a, emissive:0xff7a1a, emissiveIntensity:0.6, roughness:0.4});
+    this.mesh = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 8), mat);
+    this.mesh.position.set(this.x, this.y, this.z);
+    // trail
+    const trail = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.22, 2.0, 6),
+      new THREE.MeshBasicMaterial({color:0xffb12b, transparent:true, opacity:0.5}));
+    trail.rotation.x = Math.PI/2;
+    trail.position.z = -1.0;
+    this.mesh.add(trail);
+  }
+
+  attach(scene){ scene.add(this.mesh); this.scene=scene; }
+  detach(){ if(this.scene){ this.scene.remove(this.mesh); this.scene=null; } }
+
+  update(dt, world, game){
+    const nx = this.x + this.dir.x * this.speed * dt;
+    const nz = this.z + this.dir.z * this.speed * dt;
+    this.life -= dt;
+    if(this.life <= 0){ this.dead = true; return; }
+    // blocked by walls only â€” shells fly OVER lakes (use wallsOnly check)
+    if(world.collidesWallsOnly(nx, nz, this.radius)){
+      this.dead = true;
+      game.spawnExplosion(this.x, 1.0, this.z, 0xffaa33, 6);
+      return;
+    }
+    this.x = nx; this.z = nz;
+    // world border
+    if(Math.abs(this.x) > world.half || Math.abs(this.z) > world.half){ this.dead = true; return; }
+    this.mesh.position.set(this.x, this.y, this.z);
+    // orient trail
+    this.mesh.lookAt(this.x + this.dir.x, this.y, this.z + this.dir.z);
+
+    // tank hits
+    for(const t of game.tanks){
+      if(!t.alive) continue;
+      if(t === this.owner && this.life > (this.owner.def.shellRange/this.speed) - 0.15) continue; // don't hit self immediately
+      const dx = t.x - this.x, dz = t.z - this.z;
+      const rad = Math.max(t.def.body.w, t.def.body.l)/2 + this.radius;
+      if(dx*dx + dz*dz < rad*rad){
+        t.takeDamage(this.damage, this.owner, game);
+        game.spawnExplosion(this.x, 1.2, this.z, 0xff6a2a, 8);
+        this.dead = true;
+        return;
+      }
+    }
+  }
+}
+
+/* Flamethrower cone (Helix) â€” spawns short-lived particles + applies DPS */
+class FlameCone {
+  constructor(owner, pos, dir, def){
+    this.owner = owner;
+    this.x = pos.x; this.y = pos.y; this.z = pos.z;
+    this.dir = dir.clone().normalize();
+    this.range = def.shellRange;
+    this.dps = def.damage * 10; // damage is small per "tick" -> treat as dps
+    this.life = 0.12;          // short burst; tank keeps firing (low reload)
+    this.dead = false;
+    this.type = 'flame';
+    this.particles = [];
+    this._build();
+  }
+
+  _build(){
+    this.group = new THREE.Group();
+    this.group.position.set(this.x, this.y, this.z);
+    // a few sprite puffs
+    const colors = [0xffd24a, 0xff7a1a, 0xff3b1a];
+    for(let i=0;i<10;i++){
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35+Math.random()*0.3, 6, 6),
+        new THREE.MeshBasicMaterial({color:colors[i%3], transparent:true, opacity:0.85}));
+      const d = i/10;
+      m.position.set(
+        this.dir.x*this.range*d + (Math.random()-0.5)*1.6*d,
+        (Math.random()-0.5)*1.2*d,
+        this.dir.z*this.range*d + (Math.random()-0.5)*1.6*d);
+      m.userData.life = 0.1 + Math.random()*0.1;
+      this.group.add(m);
+      this.particles.push(m);
+    }
+  }
+
+  attach(scene){ scene.add(this.group); this.scene=scene; }
+  detach(){ if(this.scene){ this.scene.remove(this.group); this.scene=null; } }
+
+  update(dt, world, game){
+    this.life -= dt;
+    // apply damage to tanks in cone in front
+    for(const t of game.tanks){
+      if(!t.alive || t === this.owner) continue;
+      const dx = t.x - this.x, dz = t.z - this.z;
+      const dist = Math.hypot(dx, dz);
+      if(dist > this.range) continue;
+      // angle to target vs dir
+      const ang = Math.atan2(dx, dz);
+      const dang = Math.atan2(this.dir.x, this.dir.z);
+      let diff = Math.abs(((ang - dang + Math.PI)%(Math.PI*2)) - Math.PI);
+      if(diff < 0.5){ // ~28Â° cone
+        t.takeDamage(this.dps*dt, this.owner, game);
+      }
+    }
+    // fade particles
+    this.particles.forEach(p=>{
+      p.userData.life -= dt;
+      p.material.opacity = Math.max(0, p.userData.life/0.2);
+      p.scale.multiplyScalar(1 + 2*dt);
+    });
+    if(this.life <= 0) this.dead = true;
+  }
+}
+
+/* Visual-only explosion */
+class Explosion {
+  constructor(x,y,z,color,count){
+    this.x=x;this.y=y;this.z=z;this.life=0.4;this.maxLife=0.4;this.dead=false;
+    this.group=new THREE.Group(); this.group.position.set(x,y,z);
+    this.parts=[];
+    for(let i=0;i<count;i++){
+      const m=new THREE.Mesh(new THREE.SphereGeometry(0.3+Math.random()*0.4,5,5),
+        new THREE.MeshBasicMaterial({color,transparent:true,opacity:1}));
+      const dir=new THREE.Vector3((Math.random()-0.5),(Math.random()*0.8),(Math.random()-0.5)).normalize();
+      m.userData.v=dir.multiplyScalar(4+Math.random()*6);
+      this.group.add(m); this.parts.push(m);
+    }
+  }
+  attach(scene){ scene.add(this.group); this.scene=scene; }
+  detach(){ if(this.scene){ this.scene.remove(this.group); this.scene=null; } }
+  update(dt){
+    this.life-=dt;
+    this.parts.forEach(p=>{
+      p.position.addScaledVector(p.userData.v, dt);
+      p.userData.v.y -= 6*dt;
+      p.material.opacity=Math.max(0,this.life/this.maxLife);
+      p.scale.multiplyScalar(1+1.5*dt);
+    });
+    if(this.life<=0) this.dead=true;
+  }
+}
+
+</script>
+  <script>
+// ===== ' + input + '.js =====
+/* ============================================================
+   input.js â€” keyboard + mouse + wheel, with rebindable keybinds.
+   ============================================================ */
+
+class Input {
+  constructor(settings){
+    this.settings = settings;
+    this.keys = {};
+    this.mouse = { x:0, y:0, ndcX:0, ndcY:0, down:false };
+    this.binds = settings.binds; // {forward:'KeyW',...}
+    this.wheel = 0;             // accumulated wheel delta since last consume
+
+    window.addEventListener('keydown', e=>{
+      this.keys[e.code]=true;
+      if(e.code==='Space') e.preventDefault();
+    });
+    window.addEventListener('keyup',   e=>{ this.keys[e.code]=false; });
+
+    const canvas = ()=> document.querySelector('#game-root canvas');
+    document.addEventListener('mousemove', e=>{
+      this.mouse.x = e.clientX; this.mouse.y = e.clientY;
+      const c = canvas();
+      if(c){
+        const r = c.getBoundingClientRect();
+        this.mouse.ndcX =  ((e.clientX-r.left)/r.width )*2-1;
+        this.mouse.ndcY = -((e.clientY-r.top )/r.height)*2+1;
+      }
+    });
+    document.addEventListener('mousedown', e=>{ if(e.button===0) this.mouse.down=true; });
+    document.addEventListener('mouseup',   e=>{ if(e.button===0) this.mouse.down=false; });
+
+    // wheel â†’ zoom (sign normalized: up = zoom in)
+    window.addEventListener('wheel', e=>{
+      this.wheel += (e.deltaY < 0 ? 1 : -1);
+    }, {passive:true});
+
+    window.addEventListener('blur', ()=>{ this.keys={}; this.mouse.down=false; });
+  }
+
+  /* consume accumulated wheel steps (positive = zoom in, negative = zoom out) */
+  consumeWheel(){
+    const w = this.wheel; this.wheel = 0; return w;
+  }
+
+  /* rebind an action; resolves with: a key code, 'LMB', or 'WheelUp'/'WheelDown' */
+  static captureBind(){
+    return new Promise(resolve=>{
+      const kd = (e)=>{
+        cleanup();
+        resolve(e.code);
+      };
+      const md = (e)=>{
+        if(e.button!==0) return;
+        cleanup(); resolve('LMB');
+      };
+      const wh = (e)=>{
+        cleanup();
+        resolve(e.deltaY < 0 ? 'WheelUp' : 'WheelDown');
+      };
+      function cleanup(){
+        window.removeEventListener('keydown', kd);
+        window.removeEventListener('mousedown', md);
+        window.removeEventListener('wheel', wh);
+      }
+      window.addEventListener('keydown', kd);
+      window.addEventListener('mousedown', md);
+      window.addEventListener('wheel', wh, {passive:true});
+    });
+  }
+
+  /* Returns the "pressed" state for an action.
+     Zoom actions are handled via consumeZoom() â€” not here. */
+  pressed(action){
+    const k = this.binds[action];
+    if(k==='LMB') return this.mouse.down;
+    if(k==='WheelUp' || k==='WheelDown') return false; // edge-triggered elsewhere
+    return !!this.keys[k];
+  }
+
+  /* Returns +1 / -1 / 0 for zoom this frame.
+     Zoom-in bind = wheel up OR the zoomIn key; zoom-out bind = wheel down OR zoomOut key. */
+  consumeZoom(){
+    let z = this.consumeWheel();
+    if(this.keys[this.binds.zoomIn] ) z += 1;
+    if(this.keys[this.binds.zoomOut]) z -= 1;
+    return z;
+  }
+}
+
+</script>
+  <script>
+// ===== ' + bot + '.js =====
+/* ============================================================
+   bot.js â€” Simple but believable AI for bots / fake players.
+   Drives toward nearest enemy, dodges walls, fires when aligned.
+   ============================================================ */
+
+class BotBrain {
+  constructor(tank){
+    this.tank = tank;
+    this.repathTimer = 0;
+    this.targetId = null;
+    this.wanderHeading = Math.random()*Math.PI*2;
+    this.wanderTimer = 0;
+    this.fireCooldown = 0;
+  }
+
+  decide(game){
+    const me = this.tank;
+    if(!me.alive) return {throttle:0, turn:0, turretWorldAngle:me.turretAngle, fire:false};
+
+    // pick nearest alive enemy
+    let target=null, best=Infinity;
+    for(const t of game.tanks){
+      if(t===me || !t.alive) continue;
+      const d = Math.hypot(t.x-me.x, t.z-me.z);
+      if(d<best){ best=d; target=t; }
+    }
+
+    let throttle=0, turn=0;
+    let turretAngle = me.turretAngle;
+    let fire=false;
+
+    if(target){
+      const dx= target.x-me.x, dz=target.z-me.z;
+      const dist = Math.hypot(dx,dz);
+      const angleToTarget = Math.atan2(dx, dz);
+
+      // turret aims at target (lead a bit)
+      turretAngle = angleToTarget;
+      // body steers toward target but keeps distance based on tank role
+      const idealDist = me.def.shellType==='flame' ? 10 : Math.min(me.def.shellRange*0.7, 60);
+      const angDiff = this._angleDiff(angleToTarget, me.heading);
+      turn = Math.max(-1, Math.min(1, angDiff*1.5));
+      if(dist > idealDist+6) throttle = 1;
+      else if(dist < idealDist-6) throttle = -0.6;
+      else throttle = 0.2 * Math.sin(game.time*0.7+me.x); // strafe-ish
+
+      // wall avoidance: probe ahead
+      const probeX = me.x + Math.sin(me.heading)*4;
+      const probeZ = me.z + Math.cos(me.heading)*4;
+      if(game.world.collides(probeX, probeZ, 2)){
+        turn += 0.8; throttle = 0.5;
+      }
+
+      // fire if aligned & in range
+      this.fireCooldown -= game.dt;
+      const turDiff = Math.abs(this._angleDiff(turretAngle, me.turretAngle));
+      if(turDiff < 0.15 && dist < me.def.shellRange && me.reloadLeft<=0){
+        fire = true;
+      }
+    } else {
+      // wander
+      this.wanderTimer -= game.dt;
+      if(this.wanderTimer<=0){ this.wanderHeading = Math.random()*Math.PI*2; this.wanderTimer = 2+Math.random()*3; }
+      turn = Math.max(-1,Math.min(1,this._angleDiff(this.wanderHeading, me.heading)));
+      throttle = 0.7;
+    }
+    return {throttle, turn, turretWorldAngle:turretAngle, fire};
+  }
+
+  _angleDiff(a,b){
+    let d = ((a-b+Math.PI)%(Math.PI*2))-Math.PI;
+    return d;
+  }
+}
+
+</script>
+  <script>
+// ===== ' + net + '.js =====
+/* ============================================================
+   net.js â€” Peer-to-peer multiplayer using PeerJS.
+   Host = authority. Clients connect to host; host relays snapshots.
+   - Host advertises a public room OR a hidden 6-char code.
+   - Public rooms discovered via a shared "lobby" peer-id pattern
+     (we poll a deterministic id registry on the broker).
+   - Hidden rooms: code IS the peer id suffix.
+   ============================================================ */
+
+const Net = {
+  peer: null,
+  role: null,          // 'host' | 'client'
+  roomCode: null,
+  isPublic: false,
+  maxPlayers: 8,
+  fakePlayers: 4,
+  conns: {},           // peerId -> DataConnection
+  hostConn: null,      // client's connection to host
+  onJoin: null,        // cb() when connected & in game
+  onLobbyList: null,   // cb(list) for public room discovery
+  onState: null,       // cb(snapshot) for client receiving world state
+  onPlayerJoin: null,  // cb(peerInfo)
+  onPlayerLeave: null, // cb(peerId)
+  onInput: null,       // cb(peerId, input) host receives client input
+  myPeerId: null,
+  lobbyAnnounced: false,
+
+  /* ---------- Generate a 6-char code ---------- */
+  staticCode(){ return Math.random().toString(36).slice(2,8).toUpperCase(); },
+
+  roomId(code){ return CONFIG.PEER_PREFIX + 'room-' + code; },
+  lobbyId(){    return CONFIG.PEER_PREFIX + 'lobby-registry'; },
+
+  /* ---------- HOST ---------- */
+  hostRoom({maxPlayers, isPublic, fakePlayers, code}){
+    this.role='host';
+    this.maxPlayers = Math.max(1,Math.min(20,maxPlayers));
+    this.isPublic = isPublic;
+    this.fakePlayers = fakePlayers;
+    this.roomCode = code;
+    // Use the public PeerJS broker. debug:0 to keep console quiet.
+    this.peer = new Peer(this.roomId(code), {debug:0});
+
+    return new Promise((resolve,reject)=>{
+      let settled = false;
+      const ok = (id)=>{ if(settled) return; settled=true; clearTimeout(to); resolve(id); };
+      const fail = (err)=>{ if(settled) return; settled=true; clearTimeout(to);
+        try{ this.peer && this.peer.destroy(); }catch(e){} this.peer=null; reject(err); };
+      // timeout: if broker doesn't handshake in 15s, give a clear message
+      const to = setTimeout(()=> fail(new Error('Could not reach matchmaking server. Check your internet / try again.')), 15000);
+
+      this.peer.on('open', id=>{
+        this.myPeerId = id;
+        if(isPublic) this._announcePublic(code).catch(()=>{});
+        ok(id);
+      });
+      this.peer.on('error', err=>{
+        if(err.type==='unavailable-id'){ fail(new Error('Room code already in use. Click Host again for a new code.')); }
+        else if(err.type==='network' || err.type==='server-error' || err.type==='socket-error'){
+          fail(new Error('Network error reaching matchmaking server.'));
+        } else if(err.type==='browser-incompatible'){
+          fail(new Error('Browser not supported for multiplayer.'));
+        } else {
+          // non-fatal errors (e.g. 'peer-unavailable') shouldn't kill the host
+          console.warn('[peer]', err.type, err.message);
+        }
+      });
+      this.peer.on('disconnected', ()=>{
+        // try to reconnect to the broker silently
+        try{ if(this.peer && !this.peer.destroyed) this.peer.reconnect(); }catch(e){}
+      });
+      this.peer.on('connection', conn=> this._acceptClient(conn));
+    });
+  },
+
+  _acceptClient(conn){
+    conn.on('open', ()=>{
+      const count = Object.keys(this.conns).length;
+      if(count >= this.maxPlayers){
+        conn.send({t:'reject', reason:'Room full'}); conn.close(); return;
+      }
+      this.conns[conn.peer] = conn;
+      const info = {peerId:conn.peer, name:'Player'+Math.floor(Math.random()*9000+1000)};
+      conn.metadata = info;
+      conn.send({t:'welcome', you:info, maxPlayers:this.maxPlayers});
+      if(this.onPlayerJoin) this.onPlayerJoin(info);
+      this._wireClient(conn);
+    });
+  },
+
+  _wireClient(conn){
+    conn.on('data', msg=>{
+      if(msg.t==='input' && this.onInput) this.onInput(conn.peer, msg.input);
+      else if(msg.t==='leave'){ this._dropClient(conn.peer); }
+    });
+    conn.on('close', ()=> this._dropClient(conn.peer));
+    conn.on('error', ()=> this._dropClient(conn.peer));
+  },
+
+  _dropClient(peerId){
+    if(this.conns[peerId]){ try{this.conns[peerId].close();}catch(e){} delete this.conns[peerId]; }
+    if(this.onPlayerLeave) this.onPlayerLeave(peerId);
+  },
+
+  /* host broadcasts authoritative world snapshot to all clients */
+  broadcast(snapshot){
+    const msg = {t:'state', s:snapshot};
+    for(const id in this.conns){
+      const c = this.conns[id];
+      if(c.open) try{ c.send(msg); }catch(e){ this._dropClient(id); }
+    }
+  },
+
+  /* ---------- CLIENT ---------- */
+  joinRoom(code){
+    this.role='client';
+    this.roomCode = code;
+    this.peer = new Peer({debug:0});
+    return new Promise((resolve,reject)=>{
+      let settled=false;
+      const fail=(err)=>{ if(settled) return; settled=true; clearTimeout(to);
+        try{ this.peer && this.peer.destroy(); }catch(e){} this.peer=null; reject(err); };
+      const ok=()=>{ if(settled) return; settled=true; clearTimeout(to); resolve(); };
+      const to=setTimeout(()=> fail(new Error('Room not found / offline. Check the code.')), 15000);
+
+      this.peer.on('open', id=>{
+        this.myPeerId = id;
+        const conn = this.peer.connect(this.roomId(code), {reliable:true, metadata:{}});
+        conn.on('open', ()=>{ this.hostConn = conn; this._wireHost(conn); ok(); });
+        conn.on('error', ()=> fail(new Error('Could not connect to that room.')));
+      });
+      this.peer.on('error', err=>{
+        if(err.type==='peer-unavailable') fail(new Error('Room not found. Check the code.'));
+        else fail(err);
+      });
+    });
+  },
+
+  _wireHost(conn){
+    conn.on('data', msg=>{
+      if(msg.t==='welcome'){ if(this.onJoin) this.onJoin(msg); }
+      else if(msg.t==='state'){ if(this.onState) this.onState(msg.s); }
+      else if(msg.t==='reject'){ alert('Rejected: '+(msg.reason||'unknown')); this.disconnect(); }
+    });
+    conn.on('close', ()=>{ if(this.onPlayerLeave) this.onPlayerLeave('host'); });
+  },
+
+  /* client sends its input each tick to host */
+  sendInput(input){
+    if(this.hostConn && this.hostConn.open){
+      try{ this.hostConn.send({t:'input', input}); }catch(e){}
+    }
+  },
+
+  /* PUBLIC ROOM DISCOVERY
+     A single deterministic "registry" peer id holds the room list.
+     - First host to start becomes the registry (lazily registers rooms).
+     - Later hosts register with it instead. */
+  async _announcePublic(code){
+    // Try to BE the registry first.
+    const tryReg = new Peer(this.lobbyId(), {debug:0});
+    await new Promise(res=>{
+      let settled=false;
+      const done=()=>{ if(!settled){settled=true; res();} };
+      tryReg.on('open', ()=>{ this._registry = tryReg; this._registryRooms={};
+        this._registryRooms[code] = {name:'Public', code, count:1, max:this.maxPlayers};
+        this.lobbyAnnounced = true;
+        tryReg.on('connection', conn=>{ conn.on('open', ()=>{
+          conn.send({t:'rooms', rooms:this._registryRooms||{}});
+          conn.on('data', m=>{
+            if(m.t==='register'){ this._registryRooms = this._registryRooms||{};
+              this._registryRooms[m.code]={name:m.name,code:m.code,count:m.count,max:m.max}; }
+          });
+        });
+        done();
+      });
+      tryReg.on('error', (err)=>{ // someone else is the registry â€” register with them
+        try{ tryReg.destroy(); }catch(e){}
+        this._registerWithExisting(code).finally(done);
+      });
+    });
+  },
+
+  async _registerWithExisting(code){
+    const tmp = new Peer({debug:0});
+    await new Promise(res=>{
+      let settled=false; const done=()=>{if(!settled){settled=true;res();}};
+      setTimeout(done, 4000);
+      tmp.on('open', ()=>{
+        const conn = tmp.connect(this.lobbyId(), {reliable:true});
+        conn.on('open', ()=>{ conn.send({t:'register', name:'Public', code, count:1, max:this.maxPlayers}); done(); });
+        conn.on('error', done);
+      });
+      tmp.on('error', done);
+    });
+    try{ tmp.destroy(); }catch(e){}
+  },
+
+  async listPublicRooms(){
+    // Best-effort: since pure-P2P discovery requires a directory, we attempt
+    // to connect to the lobby registry peer and ask for rooms.
+    return new Promise((resolve)=>{
+      let resolved=false;
+      const tmp = new Peer({debug:0});
+      tmp.on('open', ()=>{
+        const conn = tmp.connect(this.lobbyId(), {reliable:true});
+        const done = ()=>{ if(!resolved){resolved=true; resolve([]); try{tmp.destroy();}catch(e){} } };
+        setTimeout(done, 4000);
+        conn.on('open', ()=>{
+          conn.on('data', m=>{ if(m.t==='rooms'){ resolved=true; resolve(Object.values(m.rooms||{})); try{tmp.destroy();}catch(e){} } });
+        });
+        conn.on('error', done);
+      });
+      tmp.on('error', ()=>resolve([]));
+    });
+  },
+
+  /* client â†’ host: tell host which tank the client picked */
+  sendSpawn(info){
+    if(this.hostConn && this.hostConn.open) this.hostConn.send({t:'spawn', info});
+  },
+
+  disconnect(){
+    try{ for(const id in this.conns) this.conns[id].close(); }catch(e){}
+    try{ if(this.hostConn) this.hostConn.close(); }catch(e){}
+    try{ if(this.peer) this.peer.destroy(); }catch(e){}
+    this.peer=null; this.role=null; this.conns={}; this.hostConn=null;
+  },
+};
+
+</script>
+  <script>
+// ===== ' + editor + '.js =====
+/* ============================================================
+   editor.js â€” Map Editor (blender-like, fullscreen).
+   - Own Three scene + camera (orbit).
+   - Corner toolbars: Add Figure (cube/pyramid/cone/torus/cylinder),
+     Transform (move/scale/rotate), Paint (color + pencil size),
+     Type tag ([water]/[bush-tree]/[wall-rock]), Save / Load / Clear,
+     hidden code unlock to promote map to "main".
+   - Click to select; drag handles to transform.
+   - Saves to localStorage; World.loadCustomMapData() can rebuild it.
+   ============================================================ */
+
+class MapEditor {
+  constructor(){
+    this.open = false;
+    this.objects = [];          // {mesh, type, color}
+    this.selected = null;
+    this.tool = 'move';         // move | scale | rotate
+    this.paintColor = '#8a8f98';
+    this.pencilSize = 1;
+    this.typeTag = 'wall';      // water | bush | wall
+    this._orbit = {az:0.6, el:0.9, dist:120, target:new THREE.Vector3(0,0,0)};
+    this._dragging = null;      // {mode:'orbit'|'move'|'scale'|'rotate', ...}
+  }
+
+  /* ---------- open / close ---------- */
+  show(){
+    document.getElementById('editor-overlay').classList.remove('hidden');
+    document.querySelectorAll('.menu').forEach(m=>m.classList.add('hidden'));
+    document.getElementById('hud').classList.add('hidden');
+    if(!this._inited) this._init();
+    this.open = true;
+    this._render();
+  }
+  hide(){
+    document.getElementById('editor-overlay').classList.add('hidden');
+    this.open = false;
+    Menu.show('menu-main');
+  }
+
+  _init(){
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x20242a);
+    this.scene.fog = new THREE.Fog(0x20242a, 200, 600);
+    this.camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 2000);
+    this.renderer = new THREE.WebGLRenderer({antialias:true});
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    this.renderer.setSize(innerWidth, innerHeight);
+    document.getElementById('editor-canvas-host').appendChild(this.renderer.domElement);
+
+    // lights
+    this.scene.add(new THREE.HemisphereLight(0xdfeaff, 0x404032, 1.1));
+    const sun = new THREE.DirectionalLight(0xfff2d8, 1.1); sun.position.set(60,120,40);
+    this.scene.add(sun);
+    this.scene.add(new THREE.AmbientLight(0x404048, 0.5));
+
+    // grid plane
+    const planeGeo = new THREE.PlaneGeometry(CONFIG.WORLD_SIZE, CONFIG.WORLD_SIZE);
+    planeGeo.rotateX(-Math.PI/2);
+    const plane = new THREE.Mesh(planeGeo,
+      new THREE.MeshStandardMaterial({color:0x3a4824, roughness:1}));
+    plane.receiveShadow = true;
+    this.scene.add(plane);
+    this.ground = plane;
+    // grid helper
+    const grid = new THREE.GridHelper(CONFIG.WORLD_SIZE, 30, 0x4a5a2a, 0x2a3a18);
+    grid.position.y = 0.05;
+    this.scene.add(grid);
+
+    // selection highlight
+    this._selRing = new THREE.Mesh(
+      new THREE.TorusGeometry(3, 0.15, 8, 32),
+      new THREE.MeshBasicMaterial({color:0xffb12b}));
+    this._selRing.rotation.x = Math.PI/2;
+    this._selRing.visible = false;
+    this.scene.add(this._selRing);
+
+    this._wireUI();
+    this._wireCanvas();
+    this._loop = this._loop.bind(this);
+    addEventListener('resize', ()=> this._onResize());
+    this._inited = true;
+    requestAnimationFrame(this._loop);
+
+    // load existing custom map if present
+    const m = loadCustomMap();
+    if(m) this._importMap(m);
+  }
+
+  _onResize(){
+    if(!this.renderer) return;
+    this.renderer.setSize(innerWidth, innerHeight);
+    this.camera.aspect = innerWidth/innerHeight;
+    this.camera.updateProjectionMatrix();
+  }
+
+  _loop(){
+    requestAnimationFrame(this._loop);
+    if(!this.open) return;
+    // orbit camera placement
+    const {az, el, dist, target} = this._orbit;
+    this.camera.position.set(
+      target.x + dist*Math.cos(el)*Math.sin(az),
+      target.y + dist*Math.sin(el),
+      target.z + dist*Math.cos(el)*Math.cos(az));
+    this.camera.lookAt(target);
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  /* ---------- UI wiring ---------- */
+  _wireUI(){
+    const $ = id=>document.getElementById(id);
+
+    // Add figure buttons
+    ['cube','pyramid','cone','torus','cylinder'].forEach(kind=>{
+      $('ed-fig-'+kind).onclick = ()=> this._addFigure(kind);
+    });
+
+    // tool buttons
+    $('ed-tool-move').onclick   = ()=> this._setTool('move');
+    $('ed-tool-scale').onclick  = ()=> this._setTool('scale');
+    $('ed-tool-rotate').onclick = ()=> this._setTool('rotate');
+
+    // paint
+    $('ed-color').oninput = e=>{ this.paintColor = e.target.value;
+      if(this.selected) this._recolorSelected(); };
+    $('ed-pencil-size').oninput = e=>{ this.pencilSize = +e.target.value;
+      $('ed-pencil-size-val').textContent = e.target.value;
+      if(this.selected) this._applyPencil(); };
+
+    // type tag
+    document.querySelectorAll('.ed-type').forEach(b=>{
+      b.onclick = ()=>{
+        document.querySelectorAll('.ed-type').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        this.typeTag = b.dataset.type;
+        if(this.selected){ this.selected.type = this.typeTag; this._refreshInspector(); }
+      };
+    });
+
+    // save / load / clear / unlock / back
+    $('ed-save').onclick   = ()=> this._save();
+    $('ed-load').onclick   = ()=> { const m=loadCustomMap(); if(m){ this._clearAll(); this._importMap(m); Menu.toast('Loaded your saved map'); } else Menu.toast('No saved map yet'); };
+    $('ed-clear').onclick  = ()=> this._clearAll();
+    $('ed-delete').onclick = ()=> { if(this.selected) this._deleteSelected(); };
+    $('ed-unlock-go').onclick = ()=> {
+      const code = $('ed-unlock-code').value.trim().toUpperCase();
+      if(code === MAP_UNLOCK_CODE){ setMapUnlocked(true); Menu.toast('Unlocked! Your map can now be set as MAIN.'); }
+      else Menu.toast('Wrong code');
+    };
+    $('ed-back').onclick = ()=> this.hide();
+  }
+
+  _setTool(t){
+    this.tool = t;
+    ['move','scale','rotate'].forEach(x=>{
+      document.getElementById('ed-tool-'+x).classList.toggle('active', x===t);
+    });
+  }
+
+  /* ---------- canvas interaction ---------- */
+  _wireCanvas(){
+    const dom = this.renderer.domElement;
+    const ray = new THREE.Raycaster();
+    const mouseNDC = new THREE.Vector2();
+    const plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+
+    const ndc = (e)=>{
+      const r = dom.getBoundingClientRect();
+      mouseNDC.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+    };
+    const intersectGround = ()=>{
+      ray.setFromCamera(mouseNDC, this.camera);
+      const hit = new THREE.Vector3();
+      ray.ray.intersectPlane(plane, hit);
+      return hit;
+    };
+    const intersectObjects = ()=>{
+      ray.setFromCamera(mouseNDC, this.camera);
+      const meshes = this.objects.map(o=>o.mesh);
+      const hits = ray.intersectObjects(meshes, true);
+      return hits.length? hits[0] : null;
+    };
+
+    dom.addEventListener('mousedown', e=>{
+      if(!this.open) return;
+      ndc(e);
+      if(e.button===2 || e.shiftKey){
+        // orbit
+        this._dragging = {mode:'orbit', x:e.clientX, y:e.clientY, az:this._orbit.az, el:this._orbit.el};
+        return;
+      }
+      const hit = intersectObjects();
+      if(hit){
+        const obj = this._objOfMesh(hit.object);
+        this.select(obj);
+        this._dragging = {mode:this.tool, startGround:intersectGround(), obj};
+      } else {
+        this.select(null);
+      }
+    });
+    dom.addEventListener('contextmenu', e=> e.preventDefault());
+    dom.addEventListener('mousemove', e=>{
+      if(!this._dragging) return;
+      ndc(e);
+      const d = this._dragging;
+      if(d.mode==='orbit'){
+        this._orbit.az = d.az - (e.clientX-d.x)*0.005;
+        this._orbit.el = Math.max(0.15, Math.min(1.45, d.el + (e.clientY-d.y)*0.005));
+        return;
+      }
+      if(!d.obj) return;
+      const g = intersectGround(); if(!g) return;
+      const m = d.obj.mesh;
+      if(d.mode==='move'){
+        m.position.x = g.x; m.position.z = g.z;
+      } else if(d.mode==='scale'){
+        // drag distance from object center scales uniformly
+        const s = Math.max(0.2, Math.hypot(g.x-m.position.x, g.z-m.position.z)/3);
+        m.scale.set(s*d.obj._baseScale.x, s*d.obj._baseScale.y, s*d.obj._baseScale.z);
+      } else if(d.mode==='rotate'){
+        m.rotation.y = Math.atan2(g.x-m.position.x, g.z-m.position.z);
+      }
+      this._refreshInspector();
+    });
+    window.addEventListener('mouseup', ()=> this._dragging=null);
+    dom.addEventListener('wheel', e=>{
+      if(!this.open) return;
+      this._orbit.dist = Math.max(30, Math.min(400, this._orbit.dist + (e.deltaY>0?8:-8)));
+    }, {passive:true});
+
+    // delete key removes selection
+    window.addEventListener('keydown', e=>{
+      if(!this.open) return;
+      if(e.code==='Delete' || e.code==='Backspace'){ if(this.selected) this._deleteSelected(); }
+      if(e.code==='Escape') this.select(null);
+    });
+  }
+
+  _objOfMesh(mesh){
+    while(mesh){ const o = this.objects.find(o=>o.mesh===mesh || o.mesh.children.includes(mesh)); if(o) return o; mesh = mesh.parent; }
+    return null;
+  }
+
+  /* ---------- figures ---------- */
+  _geometryFor(kind){
+    switch(kind){
+      case 'cube':     return new THREE.BoxGeometry(6,6,6);
+      case 'pyramid':  return new THREE.ConeGeometry(4,7,4);
+      case 'cone':     return new THREE.ConeGeometry(3.5,7,18);
+      case 'torus':    return new THREE.TorusGeometry(3,1.2,12,24);
+      case 'cylinder': return new THREE.CylinderGeometry(3,3,6,18);
+    }
+    return new THREE.BoxGeometry(6,6,6);
+  }
+  _addFigure(kind){
+    const geo = this._geometryFor(kind);
+    const color = parseInt(this.paintColor.slice(1),16);
+    const mat = new THREE.MeshStandardMaterial({color, roughness:0.7, metalness:0.15, flatShading:true});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(0, kind==='torus'?3:3, 0);
+    if(kind==='torus') mesh.rotation.x = Math.PI/2;
+    mesh.castShadow = mesh.receiveShadow = true;
+    this.scene.add(mesh);
+    const obj = {mesh, type:this.typeTag, color, kind, _baseScale:mesh.scale.clone()};
+    this.objects.push(obj);
+    this.select(obj);
+  }
+
+  select(obj){
+    this.selected = obj;
+    if(obj){
+      this._selRing.visible = true;
+      this._selRing.position.copy(obj.mesh.position);
+      this._selRing.position.y = 0.2;
+      const r = Math.max(obj.mesh.scale.x, obj.mesh.scale.z)*3.2;
+      this._selRing.scale.setScalar(r/3);
+    } else {
+      this._selRing.visible = false;
+    }
+    this._refreshInspector();
+  }
+
+  _refreshInspector(){
+    const ins = document.getElementById('ed-inspector');
+    if(!this.selected){ ins.innerHTML = '<div class="muted">Click an object to edit it.<br>Left-drag empty space to orbit (or Shift+drag).</div>'; return; }
+    const o = this.selected;
+    ins.innerHTML = `
+      <div class="insp-row"><b>${o.kind}</b> <span class="tag tag-${o.type}">${o.type}</span></div>
+      <div class="insp-row">Pos: ${o.mesh.position.x.toFixed(1)}, ${o.mesh.position.z.toFixed(1)}</div>
+      <div class="insp-row">Scale: ${o.mesh.scale.x.toFixed(2)}</div>
+      <div class="insp-row">Rotate: ${(o.mesh.rotation.y*57.3).toFixed(0)}Â°</div>`;
+    // sync type buttons
+    document.querySelectorAll('.ed-type').forEach(b=> b.classList.toggle('active', b.dataset.type===o.type));
+    // sync color input
+    document.getElementById('ed-color').value = '#'+(o.color).toString(16).padStart(6,'0');
+  }
+
+  _recolorSelected(){
+    if(!this.selected) return;
+    const c = parseInt(this.paintColor.slice(1),16);
+    this.selected.color = c;
+    this.selected.mesh.material.color.setHex(c);
+  }
+  _applyPencil(){
+    // "pencil size" sets object scale uniformly as a quick brush
+    if(!this.selected) return;
+    const s = this.pencilSize;
+    this.selected.mesh.scale.set(s,s,s);
+    this._refreshInspector();
+  }
+  _deleteSelected(){
+    if(!this.selected) return;
+    this.scene.remove(this.selected.mesh);
+    this.objects = this.objects.filter(o=>o!==this.selected);
+    this.select(null);
+  }
+  _clearAll(){
+    this.objects.forEach(o=> this.scene.remove(o.mesh));
+    this.objects = []; this.select(null);
+  }
+
+  /* ---------- save / load ---------- */
+  _save(){
+    const data = {
+      version:1,
+      objects: this.objects.map(o=>({
+        kind:o.kind, type:o.type, color:o.color,
+        x:o.mesh.position.x, y:o.mesh.position.y, z:o.mesh.position.z,
+        sx:o.mesh.scale.x, sy:o.mesh.scale.y, sz:o.mesh.scale.z,
+        ry:o.mesh.rotation.y,
+      })),
+    };
+    saveCustomMap(data);
+    Menu.toast('Map saved! Select it when hosting a room.');
+  }
+
+  _importMap(data){
+    (data.objects||[]).forEach(d=>{
+      const geo = this._geometryFor(d.kind);
+      const mat = new THREE.MeshStandardMaterial({color:d.color, roughness:0.7, metalness:0.15, flatShading:true});
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(d.x, d.y, d.z);
+      mesh.scale.set(d.sx, d.sy, d.sz);
+      mesh.rotation.y = d.ry;
+      mesh.castShadow = mesh.receiveShadow = true;
+      this.scene.add(mesh);
+      this.objects.push({mesh, type:d.type, color:d.color, kind:d.kind, _baseScale:new THREE.Vector3(1,1,1)});
+    });
+  }
+}
+
+</script>
+  <script>
+// ===== ' + menu + '.js =====
+/* ============================================================
+   menu.js â€” All UI: main menu, multiplayer, host/join, hidden
+   code (copy + 5s toast), collections, settings (rebindable keys
+   + aim-line opacity/color), map editor launcher, ESC menu,
+   background images, host map selection.
+   ============================================================ */
+
+const Menu = {
+  settings: loadSettings(),
+  hostCfg: { maxPlayers:8, isPublic:true, fakePlayers:4, code:'------', useCustomMap:false },
+  escOpen: false,
+  editor: null,
+
+  init(game){
+    this.game = game;
+    this.editor = new MapEditor();
+    this._wireButtons();
+    this._renderBinds();
+    this._renderAimSettings();
+    this._renderViewSettings();
+    this._renderCollections();
+    this._applyBackgrounds();
+    this._wireEsc();
+    this.show('menu-main');
+  },
+
+  show(id){
+    document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    document.getElementById('hud').classList.add('hidden');
+  },
+  showHUD(){ document.querySelectorAll('.menu').forEach(m=> m.classList.add('hidden'));
+    document.getElementById('hud').classList.remove('hidden'); },
+
+  toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.remove('hidden');
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(()=> t.classList.add('hidden'), 5000);
+  },
+
+  /* ---------- background images (auto-detect; falls back to gradient) ---------- */
+  _applyBackgrounds(){
+    const tryImg = (url, el)=>{
+      const i = new Image();
+      i.onload = ()=>{ el.style.backgroundImage = `linear-gradient(rgba(10,10,10,.55),rgba(10,10,10,.75)), url(${url})`; el.style.backgroundSize='cover'; el.style.backgroundPosition='center'; };
+      i.onerror = ()=>{};
+      i.src = url;
+    };
+    tryImg('tank party.jpg', document.getElementById('menu-main'));
+    tryImg('tank party.jpg', document.getElementById('menu-multiplayer'));
+  },
+
+  /* ---------- wiring ---------- */
+  _wireButtons(){
+    document.querySelectorAll('[data-open]').forEach(b=>{
+      b.onclick = ()=>{
+        const t = b.dataset.open;
+        if(t==='singleplayer'){ this.game.startSingleplayer(); return; }
+        if(t==='editor'){ this.editor.show(); return; }
+        this.show('menu-'+t);
+      };
+    });
+    document.querySelectorAll('[data-back]').forEach(b=>{
+      b.onclick = ()=> this.show(b.dataset.back);
+    });
+
+    // multiplayer screen
+    document.getElementById('btn-host-room').onclick = ()=>{
+      this.hostCfg.code = Net.staticCode();
+      this._refreshHostCode();
+      this._refreshMapChoice();
+      this.show('menu-host');
+    };
+    document.getElementById('btn-join-room').onclick = async ()=>{
+      this.show('menu-join');
+      const list = document.getElementById('room-list');
+      list.innerHTML = '<div class="muted">Searching for public roomsâ€¦</div>';
+      const rooms = await Net.listPublicRooms();
+      if(!rooms.length){
+        list.innerHTML = '<div class="muted">No public rooms found.<br>You can host one, or join a hidden room with a code.</div>';
+        return;
+      }
+      list.innerHTML='';
+      rooms.forEach(r=>{
+        const row = document.createElement('div'); row.className='room-row';
+        row.innerHTML = `<div><div class="rn">Room ${r.code}</div><div class="rm">${r.name||'Public'} â€¢ ${r.count||0}/${r.max||8}</div></div><div>Join â†’</div>`;
+        row.onclick = ()=> this.game.startClient(r.code);
+        list.appendChild(row);
+      });
+    };
+    document.getElementById('btn-join-hidden').onclick = ()=> this.show('menu-join-hidden');
+
+    // host settings
+    document.querySelectorAll('.seg-opt').forEach(o=>{
+      o.onclick = ()=>{
+        o.parentElement.querySelectorAll('.seg-opt').forEach(x=>x.classList.remove('active'));
+        o.classList.add('active');
+        this.hostCfg.isPublic = (o.dataset.vis === 'public');
+        document.getElementById('host-code-row').classList.toggle('hidden', this.hostCfg.isPublic);
+      };
+    });
+    document.getElementById('host-maxplayers').oninput = e=> this.hostCfg.maxPlayers = Math.max(1,Math.min(20,+e.target.value||1));
+    document.getElementById('host-fakeplayers').oninput = e=> this.hostCfg.fakePlayers = Math.max(0,Math.min(20,+e.target.value||0));
+    document.getElementById('host-code').onclick = ()=> this._copyCode();
+    document.getElementById('btn-start-host').onclick = ()=>{
+      this.game.setUseCustomMap(this.hostCfg.useCustomMap);
+      this.game.startHost(this.hostCfg);
+    };
+    // map choice in host screen
+    const mapBig = document.getElementById('host-map-big');
+    const mapMine = document.getElementById('host-map-mine');
+    if(mapBig) mapBig.onclick = ()=>{ this.hostCfg.useCustomMap=false; this._refreshMapChoice(); };
+    if(mapMine) mapMine.onclick = ()=>{ this.hostCfg.useCustomMap=true; this._refreshMapChoice(); };
+
+    // hidden join
+    document.getElementById('btn-connect-hidden').onclick = ()=>{
+      const code = document.getElementById('hidden-code-input').value.trim().toUpperCase();
+      if(code.length<4){ this.toast('Enter a valid code'); return; }
+      this.game.startClient(code);
+    };
+    document.getElementById('bigmap-close').onclick = ()=> document.getElementById('bigmap').classList.add('hidden');
+    document.getElementById('minimap-btn').onclick = ()=> this.game.openBigMap();
+
+    // ESC menu buttons
+    document.getElementById('esc-yes').onclick = ()=>{ this._closeEsc(); this.game.leaveToMenu(); };
+    document.getElementById('esc-no').onclick  = ()=> this._closeEsc();
+  },
+
+  _refreshHostCode(){
+    document.getElementById('host-code').textContent = this.hostCfg.code;
+    document.getElementById('host-code-row').classList.toggle('hidden', this.hostCfg.isPublic);
+  },
+  _refreshMapChoice(){
+    const big = document.getElementById('host-map-big');
+    const mine = document.getElementById('host-map-mine');
+    if(!big || !mine) return;
+    big.classList.toggle('selected', !this.hostCfg.useCustomMap);
+    mine.classList.toggle('selected', this.hostCfg.useCustomMap);
+    mine.classList.toggle('disabled', !hasCustomMap());
+    if(!hasCustomMap() && this.hostCfg.useCustomMap){ this.hostCfg.useCustomMap=false; big.classList.add('selected'); }
+  },
+
+  async _copyCode(){
+    try{
+      await navigator.clipboard.writeText(this.hostCfg.code);
+      this.toast('Copied to clipboard');
+    }catch(e){
+      const ta=document.createElement('textarea'); ta.value=this.hostCfg.code;
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      this.toast('Copied to clipboard');
+    }
+  },
+
+  /* ---------- ESC menu (works anywhere) ---------- */
+  _wireEsc(){
+    window.addEventListener('keydown', e=>{
+      if(e.code!=='Escape') return;
+      // ignore ESC while typing in an input
+      if(document.activeElement && /input|textarea/i.test(document.activeElement.tagName)) return;
+      // ignore if editor is open (editor handles its own ESC)
+      if(this.editor && this.editor.open) return;
+      // ignore if a big map is open
+      if(!document.getElementById('bigmap').classList.contains('hidden')){
+        document.getElementById('bigmap').classList.add('hidden'); return;
+      }
+      this.toggleEsc();
+    });
+  },
+  toggleEsc(){
+    if(this.escOpen){ this._closeEsc(); }
+    else{
+      document.getElementById('esc-menu').classList.remove('hidden');
+      this.escOpen = true;
+    }
+  },
+  _closeEsc(){
+    document.getElementById('esc-menu').classList.add('hidden');
+    this.escOpen = false;
+  },
+
+  /* ---------- settings binds ---------- */
+  _renderBinds(){
+    const wrap = document.getElementById('bind-list');
+    wrap.innerHTML='';
+    Object.keys(DEFAULT_BINDS).forEach(action=>{
+      const row = document.createElement('div'); row.className='bind-row';
+      row.innerHTML = `<div class="bl">${DEFAULT_BINDS[action].label}</div><div class="bind-key" data-action="${action}">${this._keyLabel(this.settings.binds[action])}</div>`;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll('.bind-key').forEach(el=>{
+      el.onclick = async ()=>{
+        el.classList.add('binding'); el.textContent='Press a key / wheelâ€¦';
+        const captured = await Input.captureBind();
+        this.settings.binds[el.dataset.action] = captured;
+        saveSettings(this.settings);
+        el.classList.remove('binding');
+        el.textContent = this._keyLabel(captured);
+        this.game.applySettings(this.settings);
+      };
+    });
+  },
+  _keyLabel(k){
+    if(k==='LMB') return 'LMB';
+    if(k==='WheelUp') return 'Wheel â†‘';
+    if(k==='WheelDown') return 'Wheel â†“';
+    if(k==='Space') return 'Space';
+    if(k.startsWith('Key')) return k.slice(3);
+    if(k.startsWith('Arrow')) return k.slice(5)+' arrow';
+    return k;
+  },
+
+  /* ---------- aim line settings ---------- */
+  _renderAimSettings(){
+    const wrap = document.getElementById('aim-settings');
+    if(!wrap) return;
+    wrap.innerHTML = `
+      <label>Trajectory line opacity: <span id="aim-op-val">${Math.round(this.settings.aimLineOpacity*100)}%</span></label>
+      <input type="range" id="aim-op" min="0" max="100" value="${Math.round(this.settings.aimLineOpacity*100)}">
+      <label>Trajectory line color</label>
+      <input type="color" id="aim-color" value="${this.settings.aimLineColor}">`;
+    document.getElementById('aim-op').oninput = e=>{
+      this.settings.aimLineOpacity = +e.target.value/100;
+      document.getElementById('aim-op-val').textContent = e.target.value+'%';
+      saveSettings(this.settings); this.game.applySettings(this.settings);
+    };
+    document.getElementById('aim-color').oninput = e=>{
+      this.settings.aimLineColor = e.target.value;
+      saveSettings(this.settings); this.game.applySettings(this.settings);
+    };
+  },
+
+  /* ---------- view-range settings ---------- */
+  _renderViewSettings(){
+    const wrap = document.getElementById('view-settings');
+    if(!wrap) return;
+    wrap.innerHTML = `
+      <label>View-range circle opacity: <span id="view-op-val">${Math.round(this.settings.viewRangeOpacity*100)}%</span></label>
+      <input type="range" id="view-op" min="0" max="100" value="${Math.round(this.settings.viewRangeOpacity*100)}">
+      <label>View-range circle color</label>
+      <input type="color" id="view-color" value="${this.settings.viewRangeColor}">`;
+    document.getElementById('view-op').oninput = e=>{
+      this.settings.viewRangeOpacity = +e.target.value/100;
+      document.getElementById('view-op-val').textContent = e.target.value+'%';
+      saveSettings(this.settings); this.game.applySettings(this.settings);
+    };
+    document.getElementById('view-color').oninput = e=>{
+      this.settings.viewRangeColor = e.target.value;
+      saveSettings(this.settings); this.game.applySettings(this.settings);
+    };
+  },
+
+  /* ---------- collections ---------- */
+  _renderCollections(){
+    const grid = document.getElementById('tank-grid');
+    grid.innerHTML='';
+    TANK_ORDER.forEach(id=>{
+      const t = TANKS[id];
+      const card = document.createElement('div');
+      card.className='tank-card'+(id===this.settings.selectedTank?' selected':'');
+      card.dataset.id=id;
+      card.innerHTML = `
+        <div class="tank-preview">
+          <svg viewBox="0 0 80 50" width="80" height="50">
+            <rect x="8" y="28" width="64" height="14" rx="3" fill="#${(t.color).toString(16).padStart(6,'0')}"/>
+            <rect x="26" y="16" width="32" height="14" rx="3" fill="#${(t.turretColor).toString(16).padStart(6,'0')}"/>
+            <rect x="54" y="20" width="22" height="4" fill="#222"/>
+          </svg>
+        </div>
+        <div class="tank-name">${t.name}</div>
+        <div class="tank-tier">Collection ${t.collection}</div>
+        <div class="tank-stats">HP ${t.hp} â€¢ DMG ${t.damage}<br>Speed ${t.speed} â€¢ Reload ${t.reload}s</div>`;
+      card.onclick = ()=>{
+        this.settings.selectedTank = id;
+        saveSettings(this.settings);
+        this._renderCollections();
+        this.game.applySettings(this.settings);
+      };
+      grid.appendChild(card);
+    });
+  },
+
+  showConnecting(msg){ document.getElementById('connecting').querySelector('h2').textContent = msg||'Connectingâ€¦';
+    document.getElementById('connecting').classList.remove('hidden'); },
+  hideConnecting(){ document.getElementById('connecting').classList.add('hidden'); },
+};
+
+</script>
+  <script>
+// ===== ' + game + '.js =====
+/* ============================================================
+   game.js â€” main controller: renderer, scene, world, tanks,
+   projectiles, camera, loop, HUD, minimap, entry modes
+   (singleplayer / host / client).
+   ============================================================ */
+
+class Game {
+  constructor(){
+    this.settings = Menu.settings;
+    this.mode = null;     // 'sp' | 'host' | 'client'
+    this.running = false;
+    this.tanks = [];
+    this.projectiles = [];
+    this.explosions = [];
+    this.localTank = null;
+    this.time = 0;
+    this.dt = 0;
+    this._last = 0;
+    this._netSendAcc = 0;
+    this.clientTankInputs = {}; // peerId -> last input (host side)
+    this.clientTanks = {};      // peerId -> Tank (host side)
+    this._shake = 0;            // camera shake magnitude
+  }
+
+  /* ---------- Three.js bootstrap ---------- */
+  init(){
+    this.renderer = new THREE.WebGLRenderer({antialias:true});
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    this.renderer.setSize(innerWidth, innerHeight);
+    this.renderer.shadowMap.enabled = false;
+    document.getElementById('game-root').appendChild(this.renderer.domElement);
+
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 1000);
+    this.camera.position.set(0, CONFIG.CAM_HEIGHT, -CONFIG.CAM_DIST);
+
+    this.world = new World(this.scene);
+    this.input = new Input(this.settings);
+
+    // camera zoom state
+    this.camDist = CONFIG.CAM_DIST;
+
+    // aim/trajectory line (from muzzle, length = shellRange)
+    this._initAimLine();
+
+    // probe available tank models (async; tanks built later will use cache)
+    Models.probe(TANK_ORDER).catch(()=>{});
+
+    addEventListener('resize', ()=> this._onResize());
+    this._loop = this._loop.bind(this);
+    requestAnimationFrame(this._loop);
+  }
+
+  /* Trajectory / aim line: a thin dashed line that always points where
+     the turret faces, clipped to the tank's shell range. */
+  _initAimLine(){
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xffffff, transparent:true, opacity:this.settings.aimLineOpacity,
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    this.aimLine = new THREE.Line(geo, mat);
+    this.aimLine.visible = false;
+    this.aimLine.frustumCulled = false;
+    this.scene.add(this.aimLine);
+  }
+  refreshAimLineStyle(){
+    if(!this.aimLine) return;
+    this.aimLine.material.opacity = this.settings.aimLineOpacity;
+    this.aimLine.material.color.set(this.settings.aimLineColor);
+  }
+
+  _onResize(){
+    this.renderer.setSize(innerWidth, innerHeight);
+    this.camera.aspect = innerWidth/innerHeight;
+    this.camera.updateProjectionMatrix();
+  }
+
+  applySettings(s){
+    this.settings = s;
+    if(this.input) this.input.binds = s.binds;
+    this.refreshAimLineStyle();
+    this.refreshViewRangeStyle();
+  }
+
+  /* Whether to use the player's custom map (set when hosting, if chosen). */
+  setUseCustomMap(v){ this._useCustomMap = !!v; }
+
+  /* View range circle styling (from settings) applied to all tanks. */
+  refreshViewRangeStyle(){
+    if(!this.tanks) return;
+    for(const t of this.tanks){
+      t.setViewRangeStyle(this.settings.viewRangeOpacity, this.settings.viewRangeColor);
+    }
+  }
+
+  /* ===========================================================
+     ENTRY MODES
+     =========================================================== */
+
+  /* ---------- SINGLEPLAYER ---------- */
+  startSingleplayer(){
+    this.mode='sp'; this._resetArena();
+    if(this._useCustomMap){
+      const m = loadCustomMap();
+      if(m) this.world.loadCustomMapData(m);
+    }
+    // local tank
+    this._spawnLocal();
+    // some bots
+    for(let i=0;i<5;i++) this._spawnBot();
+    this._begin();
+  }
+
+  /* ---------- HOST ---------- */
+  async startHost(cfg){
+    Menu.showConnecting('Creating roomâ€¦');
+    try{
+      await Net.hostRoom({maxPlayers:cfg.maxPlayers, isPublic:cfg.isPublic, fakePlayers:cfg.fakePlayers, code:cfg.code});
+    }catch(e){
+      Menu.hideConnecting();
+      Menu.toast(e.message||'Failed to host');
+      return;
+    }
+    Menu.hideConnecting();
+    Menu.toast('Room live â€¢ Code: '+cfg.code);
+    this.mode='host'; this._resetArena();
+    if(this._useCustomMap){
+      const m = loadCustomMap();
+      if(m) this.world.loadCustomMapData(m);
+    }
+    this._spawnLocal();
+    // fake players (bots)
+    for(let i=0;i<cfg.fakePlayers;i++) this._spawnBot();
+    // network callbacks
+    Net.onPlayerJoin = (info)=> this._onClientJoin(info);
+    Net.onPlayerLeave = (peerId)=> this._onClientLeave(peerId);
+    Net.onInput = (peerId, inp)=> { this.clientTankInputs[peerId] = inp; };
+    this._begin();
+  }
+
+  _onClientJoin(info){
+    // create a tank for the joining client
+    const def = TANKS[this.settings.selectedTank];
+    const sp = this.world.randomSpawn();
+    const t = new Tank(def, {id:'remote-'+info.peerId, name:info.name, ownerPeer:info.peerId, x:sp.x, z:sp.z, heading:Math.random()*6});
+    this._finalizeTank(t); this.tanks.push(t);
+    this.clientTanks[info.peerId] = t;
+  }
+  _onClientLeave(peerId){
+    const t = this.clientTanks[peerId];
+    if(t){ t.detach(); this.tanks = this.tanks.filter(x=>x!==t); delete this.clientTanks[peerId]; }
+    delete this.clientTankInputs[peerId];
+  }
+
+  /* ---------- CLIENT ---------- */
+  async startClient(code){
+    Menu.showConnecting('Joining roomâ€¦');
+    try{
+      await Net.joinRoom(code);
+    }catch(e){
+      Menu.hideConnecting();
+      Menu.toast(e.message||'Could not join room');
+      return;
+    }
+    Menu.hideConnecting();
+    this.mode='client'; this._resetArena();
+    this._spawnLocal();
+    Net.onState = (snap)=> this._applyHostState(snap);
+    Net.onPlayerLeave = (peerId)=>{ if(peerId==='host'){ Menu.toast('Host left'); this.leaveToMenu(); } };
+    this._begin();
+  }
+
+  _applyHostState(snap){
+    // snap = { tanks:[...], time }
+    if(snap.time) this.time = snap.time;
+    // upsert tanks (skip local)
+    const seen = new Set([this.localTank.id]);
+    (snap.tanks||[]).forEach(s=>{
+      if(seen.has(s.id)) return;
+      let t = this.tanks.find(x=>x.id===s.id);
+      if(!t){
+        const def = TANKS[s.tank]||TANKS.coolbuddy;
+        t = new Tank(def, {id:s.id, name:s.name, x:s.x, z:s.z, heading:s.h, color:s.col});
+        this._finalizeTank(t); this.tanks.push(t);
+      }
+      t.applyPartialSnapshot(s);
+      seen.add(s.id);
+    });
+    // remove unseen
+    this.tanks = this.tanks.filter(t=>{
+      if(!seen.has(t.id)){ t.detach(); return false; } return true;
+    });
+  }
+
+  /* ---------- arena reset / spawn ---------- */
+  _resetArena(){
+    // clear previous
+    this.tanks.forEach(t=>t.detach());
+    this.projectiles.forEach(p=>p.detach());
+    this.explosions.forEach(e=>e.detach());
+    this.tanks=[]; this.projectiles=[]; this.explosions=[];
+    this.localTank=null; this.time=0;
+    // (world is built once in init; custom map data is additive. For a prototype
+    // this is fine â€” re-entering uses the same world.)
+  }
+
+  _spawnLocal(){
+    const def = TANKS[this.settings.selectedTank] || TANKS.coolbuddy;
+    const sp = this.world.randomSpawn();
+    const t = new Tank(def, {id:'local', name:this.settings.playerName, isLocal:true, x:sp.x, z:sp.z, heading:Math.random()*6});
+    this._finalizeTank(t); this.tanks.push(t); this.localTank = t;
+  }
+
+  _spawnBot(){
+    const ids = TANK_ORDER.filter(id=>id!==this.settings.selectedTank);
+    const id = ids[Math.floor(Math.random()*ids.length)];
+    const def = TANKS[id];
+    const sp = this.world.randomSpawn();
+    const t = new Tank(def, {id:'bot-'+Math.random().toString(36).slice(2,6), name:BOTNAMES[Math.floor(Math.random()*BOTNAMES.length)], isBot:true, x:sp.x, z:sp.z, heading:Math.random()*6});
+    t.brain = new BotBrain(t);
+    this._finalizeTank(t); this.tanks.push(t);
+  }
+
+  /* attach to scene + build view range circle + apply settings styles */
+  _finalizeTank(t){
+    t.attach(this.scene);
+    t.makeViewRangeCircle();
+    t.setViewRangeStyle(this.settings.viewRangeOpacity, this.settings.viewRangeColor);
+    return t;
+  }
+
+  _begin(){
+    Menu.showHUD();
+    this.running = true;
+    this._last = performance.now();
+  }
+
+  leaveToMenu(){
+    this.running = false;
+    this.mode = null;
+    Net.disconnect();
+    this._resetArena();
+    Menu.show('menu-main');
+  }
+
+  /* ===========================================================
+     GAME LOOP
+     =========================================================== */
+  _loop(now){
+    requestAnimationFrame(this._loop);
+    const dt = Math.min(0.05, (now - this._last)/1000 || 0);
+    this._last = now;
+    if(this.running){
+      this.dt = dt; this.time += dt;
+      this._update(dt);
+    }
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  _update(dt){
+    this.world.update(dt, this.time);
+
+    // ---- camera zoom (wheel or bound keys) ----
+    const zoom = this.input.consumeZoom();
+    if(zoom !== 0){
+      this.camDist = Math.max(CONFIG.CAM_DIST_MIN, Math.min(CONFIG.CAM_DIST_MAX,
+        this.camDist - zoom*CONFIG.CAM_ZOOM_STEP));
+    }
+
+    // ---- inputs for local tank ----
+    if(this.localTank && this.localTank.alive){
+      const throttle = (this.input.pressed('forward')?1:0) - (this.input.pressed('backward')?1:0);
+      const turn     = (this.input.pressed('right')?1:0)   - (this.input.pressed('left')?1:0);
+      const turretAngle = this._mouseWorldAngle();
+      const fire = this.input.pressed('fire');
+      const handbrake = this.input.pressed('handbrake');
+      const input = {throttle, turn, turretWorldAngle:turretAngle, fire, handbrake};
+      this.localTank.setInput(input);
+      // client: forward input to host (local tank still simulated for prediction,
+      // and updated once in the tank loop below â€” no double update)
+      if(this.mode==='client'){
+        Net.sendInput(input);
+      }
+    }
+
+    // ---- update tanks ----
+    this.tanks.forEach(t=>{
+      if(t.brain){
+        t.setInput(t.brain.decide(this));
+      } else if(t.ownerPeer && this.clientTankInputs[t.ownerPeer]){
+        t.setInput(this.clientTankInputs[t.ownerPeer]);
+      } else if(t === this.localTank){
+        // already set
+      } else {
+        t.setInput({throttle:0,turn:0,turretWorldAngle:t.turretAngle,fire:false});
+      }
+      t.update(dt, this.world, this);
+    });
+
+    // ---- projectiles ----
+    this.projectiles.forEach(p=> p.update(dt, this.world, this));
+    this.projectiles = this.projectiles.filter(p=>{ if(p.dead){p.detach(); return false;} return true; });
+    this.explosions.forEach(e=> e.update(dt));
+    this.explosions = this.explosions.filter(e=>{ if(e.dead){e.detach(); return false;} return true; });
+
+    // ---- camera: true 3rd-person chase cam (behind body heading, tank centered) ----
+    if(this.localTank){
+      const t = this.localTank;
+      const sx = Math.sin(t.heading), cz = Math.cos(t.heading);
+      // camera sits behind the tank along its heading, raised; tank is centered.
+      const camTarget = new THREE.Vector3(
+        t.x - sx*this.camDist,
+        this.camDist*0.78 + 3,
+        t.z - cz*this.camDist);
+      this.camera.position.lerp(camTarget, CONFIG.CAM_LERP);
+      // look AT the tank so the tank stays centered on screen
+      this.camera.lookAt(t.x, 1.2, t.z);
+      // camera shake (decays each frame)
+      if(this._shake > 0){
+        this._shake = Math.max(0, this._shake - dt*2.5);
+        const s = this._shake;
+        this.camera.position.x += (Math.random()-0.5)*s;
+        this.camera.position.y += (Math.random()-0.5)*s;
+        this.camera.position.z += (Math.random()-0.5)*s;
+      }
+    }
+
+    // ---- aim/trajectory line (local tank only, flame tank hides it) ----
+    this._updateAimLine();
+
+    // ---- spotting / camouflage visibility filter ----
+    this._updateVisibility();
+
+    // ---- networking: host broadcasts state ----
+    if(this.mode==='host'){
+      this._netSendAcc += dt;
+      if(this._netSendAcc > 0.06){ // ~15Hz
+        this._netSendAcc = 0;
+        Net.broadcast({time:this.time, tanks:this.tanks.map(t=>t.snapshot())});
+      }
+    }
+
+    // ---- HUD ----
+    this._updateHUD();
+  }
+
+  /* Update the aim line: from muzzle to shellRange, stopped by walls. */
+  _updateAimLine(){
+    if(!this.aimLine) return;
+    const t = this.localTank;
+    if(!t || !t.alive || t.def.shellType==='flame'){
+      this.aimLine.visible = false; return;
+    }
+    this.aimLine.visible = true;
+    const {pos, dir} = t.muzzle();
+    const startX = pos.x, startZ = pos.z;
+    // march until shellRange or first wall hit
+    const range = t.def.shellRange;
+    const step = 1.5;
+    let endX = startX, endZ = startZ, hit = false;
+    for(let d=0; d<=range; d+=step){
+      const tx = startX + dir.x*d, tz = startZ + dir.z*d;
+      if(this.world.collidesWallsOnly(tx, tz, 0.3)){ endX=tx; endZ=tz; hit=true; break; }
+      endX=tx; endZ=tz;
+    }
+    const y = t.def.body.h + 0.6;
+    const arr = this.aimLine.geometry.attributes.position.array;
+    arr[0]=startX; arr[1]=y; arr[2]=startZ;
+    arr[3]=endX;   arr[4]=y; arr[5]=endZ;
+    this.aimLine.geometry.attributes.position.needsUpdate = true;
+  }
+
+  /* local prediction for client (move locally, host corrects via snapshots applied to non-local; local not corrected here) */
+  _clientLocalPredict(dt){
+    if(this.localTank) this.localTank.update(dt, this.world, this);
+  }
+  /* angle from tank to mouse-projected point on the ground plane */
+  _mouseWorldAngle(){
+    if(!this.localTank) return 0;
+    const ray = new THREE.Raycaster();
+    const v = new THREE.Vector2(this.input.mouse.ndcX, this.input.mouse.ndcY);
+    ray.setFromCamera(v, this.camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -(this.localTank.def.body.h+0.5));
+    const hit = new THREE.Vector3();
+    if(!ray.ray.intersectPlane(plane, hit)) return this.localTank.turretAngle;
+    return Math.atan2(hit.x - this.localTank.x, hit.z - this.localTank.z);
+  }
+
+  /* ===========================================================
+     COMBAT HOOKS
+     =========================================================== */
+  spawnShot(tank){
+    const {pos, dir} = tank.muzzle();
+    const y = tank.def.body.h + 0.5;
+    const p = tank.def.shellType==='flame'
+      ? new FlameCone(tank, new THREE.Vector3(pos.x, y, pos.z), dir, tank.def)
+      : new Shell(tank, new THREE.Vector3(pos.x, y, pos.z), dir, tank.def);
+    p.attach(this.scene); this.projectiles.push(p);
+    if(tank===this.localTank) this._muzzleFlash(pos, dir);
+  }
+
+  _muzzleFlash(pos, dir){
+    const ex = new Explosion(pos.x, pos.y+0.2, pos.z, 0xffe08a, 5);
+    ex.attach(this.scene); this.explosions.push(ex);
+  }
+
+  spawnExplosion(x,y,z,color,count){
+    const e = new Explosion(x,y,z,color,count||6);
+    e.attach(this.scene); this.explosions.push(e);
+  }
+
+  onTankKilled(tank, byTank){
+    this.spawnExplosion(tank.x, 1.4, tank.z, 0xff5b3b, 16);
+    this.spawnExplosion(tank.x, 2.0, tank.z, 0xffaa33, 10);
+    // camera shake for anyone (local player) close to the death
+    if(this.localTank){
+      const d = Math.hypot(this.localTank.x-tank.x, this.localTank.z-tank.z);
+      if(d < 45){
+        this._shake = Math.max(this._shake, 0.9 * (1 - d/45));
+      }
+    }
+  }
+
+  /* Called when the LOCAL tank finishes its death sequence -> main menu */
+  onLocalDeath(){
+    this.running = false;
+    Menu.toast('Your tank was destroyed');
+    setTimeout(()=> this.leaveToMenu(), 600);
+  }
+
+  addShake(amount){ this._shake = Math.max(this._shake, amount); }
+
+  /* ---------- Spotting / camouflage visibility ----------
+     A tank is visible to the local player if:
+       - it's within the local tank's viewRange AND not hidden in a bush, OR
+       - it's within 18 units (close proxy-spotting), OR
+       - it's the local tank itself
+     Hidden tanks have their root.hidden = true via the material opacity. */
+  _updateVisibility(){
+    if(!this.localTank) return;
+    const me = this.localTank;
+    for(const t of this.tanks){
+      if(t === me){ t.root.visible = true; continue; }
+      if(t.dying){ /* keep dying wreck visible */ t.root.visible = true; continue; }
+      const d = Math.hypot(t.x-me.x, t.z-me.z);
+      let visible;
+      if(d < 18) visible = true;                       // close-range proxy spot
+      else if(d <= me.viewRange) visible = (t.camoFactor >= 0.5);  // in range: hidden if bush
+      else visible = false;                            // out of range
+      t.root.visible = visible;
+    }
+  }
+
+  /* ===========================================================
+     HUD
+     =========================================================== */
+  _updateHUD(){
+    if(!this.localTank) return;
+    const t = this.localTank;
+    // speed
+    document.getElementById('speed-val').textContent = Math.max(0, Math.round(Math.abs(t.speed) * U_TO_KMH));
+    // hp
+    const hpBar = document.getElementById('hp-bar');
+    const pct = Math.max(0, t.hp/t.maxHp);
+    hpBar.style.width = (pct*100)+'%';
+    document.getElementById('hp-text').textContent = `${Math.ceil(t.hp)} / ${t.maxHp}`;
+    // bush dot indicator (green = hidden in bush, gray = not)
+    const dot = document.getElementById('camo-dot');
+    const camoTxt = document.getElementById('camo-text');
+    if(dot && camoTxt){
+      if(t.camoState === 'bush'){
+        dot.className = 'camo-dot on'; camoTxt.textContent = 'You are in bush';
+      } else if(t.camoState === 'tree'){
+        dot.className = 'camo-dot mid'; camoTxt.textContent = 'Partial cover';
+      } else {
+        dot.className = 'camo-dot off'; camoTxt.textContent = '';
+      }
+    }
+    // leaderboard top 5 by damageDealt (only visible tanks shown to local)
+    const sorted = [...this.tanks]
+      .filter(x=> x===t || x.root.visible)
+      .sort((a,b)=> b.damageDealt - a.damageDealt).slice(0,5);
+    const lb = document.getElementById('lb-list');
+    lb.innerHTML = sorted.map(o=> `<li><span class="lname">${o.name}</span><span class="ldmg">${Math.round(o.damageDealt)}</span></li>`).join('');
+  }
+
+  /* ---------- Big map ---------- */
+  openBigMap(){
+    const wrap = document.getElementById('bigmap');
+    const cv = document.getElementById('bigmap-canvas');
+    const S = 720;
+    cv.width = cv.height = S;
+    const ctx = cv.getContext('2d');
+    this.world.renderToCanvas(ctx, S, S);
+    // draw all tanks as dots (only own tank per spec â€” enemies not shown)
+    if(this.localTank){
+      const [px,py] = this.world.worldToMap(this.localTank.x, this.localTank.z, S);
+      // triangle for heading
+      ctx.save(); ctx.translate(px,py); ctx.rotate(-this.localTank.heading);
+      ctx.fillStyle='#ffb12b'; ctx.beginPath();
+      ctx.moveTo(0,-8); ctx.lineTo(6,8); ctx.lineTo(-6,8); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    wrap.classList.remove('hidden');
+  }
+}
+
+const BOTNAMES = ['Rommel','Patton','Guderian','Zhukov','Abrams','Leclerc','Tiger','Panther','Sherman','T-34','Challenger','Merkava','Karl','Bovington','Stug','Hetzer','IS-2','Comet','Cromwell','Hellcat'];
+
+/* ---------- Bootstrap ---------- */
+window.addEventListener('DOMContentLoaded', ()=>{
+  const game = new Game();
+  game.init();
+  Menu.init(game);
+  window.__game = game; // debug
+});
+
+</script>
+</body>
+</html>
+

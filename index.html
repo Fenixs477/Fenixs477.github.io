@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Tank Legends Cline</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 3D canvas mount -->
+  <div id="game-root"></div>
+
+  <!-- ============ OVERLAYS ============ -->
+  <div id="ui-layer">
+
+    <!-- MAIN MENU -->
+    <div class="menu" id="menu-main">
+      <div class="menu-card">
+        <h1 class="title">MINI TANK&nbsp;LEGENDS</h1>
+        <div class="btn" data-open="singleplayer">Singleplayer</div>
+        <div class="btn" data-open="multiplayer">Multiplayer</div>
+        <div class="btn" data-open="collections">Collections</div>
+        <div class="btn" data-open="settings">Settings</div>
+        <div class="btn btn-subtle" data-open="editor">Map Editor</div>
+      </div>
+    </div>
+
+    <!-- MULTIPLAYER ROOT -->
+    <div class="menu hidden" id="menu-multiplayer">
+      <div class="menu-card">
+        <h2>Multiplayer</h2>
+        <div class="btn btn-primary" id="btn-host-room">Host Room</div>
+        <div class="btn" id="btn-join-room">Join Room</div>
+        <div class="btn btn-subtle" id="btn-join-hidden">Join Hidden Room</div>
+        <div class="btn btn-back" data-back="menu-main">← Back</div>
+      </div>
+    </div>
+
+    <!-- HOST SETTINGS -->
+    <div class="menu hidden" id="menu-host">
+      <div class="menu-card">
+        <h2>Host Room</h2>
+        <label>Max Players (max 20)</label>
+        <input type="number" id="host-maxplayers" min="1" max="20" value="8">
+        <div class="hint">⚠ Many players → stronger device recommended</div>
+
+        <label>Visibility</label>
+        <div class="seg">
+          <div class="seg-opt active" data-vis="public">Public</div>
+          <div class="seg-opt" data-vis="hidden">Hidden</div>
+        </div>
+
+        <label>Max Fake Players (bots)</label>
+        <input type="number" id="host-fakeplayers" min="0" max="20" value="4">
+
+        <label>Map</label>
+        <div class="map-choice">
+          <div class="map-opt selected" id="host-map-big">Big Default Map</div>
+          <div class="map-opt" id="host-map-mine">My Map <small>(editor)</small></div>
+        </div>
+
+        <div id="host-code-row" class="hidden">
+          <label>Room Code (click to copy)</label>
+          <div class="code-box" id="host-code">--------</div>
+        </div>
+
+        <div class="btn btn-primary" id="btn-start-host">Start Hosting</div>
+        <div class="btn btn-back" data-back="menu-multiplayer">← Back</div>
+      </div>
+    </div>
+
+    <!-- JOIN ROOM (public list) -->
+    <div class="menu hidden" id="menu-join">
+      <div class="menu-card wide">
+        <h2>Public Rooms</h2>
+        <div id="room-list" class="room-list"><div class="muted">Searching for public rooms…</div></div>
+        <div class="btn btn-back" data-back="menu-multiplayer">← Back</div>
+      </div>
+    </div>
+
+    <!-- JOIN HIDDEN (paste code) -->
+    <div class="menu hidden" id="menu-join-hidden">
+      <div class="menu-card">
+        <h2>Join Hidden Room</h2>
+        <label>Paste Room Code</label>
+        <input type="text" id="hidden-code-input" placeholder="XXXXXXXX" maxlength="8">
+        <div class="btn btn-primary" id="btn-connect-hidden">Connect</div>
+        <div class="btn btn-back" data-back="menu-multiplayer">← Back</div>
+      </div>
+    </div>
+
+    <!-- COLLECTIONS -->
+    <div class="menu hidden" id="menu-collections">
+      <div class="menu-card wide">
+        <h2>Collections</h2>
+        <div id="tank-grid" class="tank-grid"></div>
+        <div class="btn btn-back" data-back="menu-main">← Back</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="menu hidden" id="menu-settings">
+      <div class="menu-card">
+        <h2>Settings</h2>
+        <div id="bind-list"></div>
+        <hr class="sep">
+        <div id="aim-settings"></div>
+        <hr class="sep">
+        <div id="view-settings"></div>
+        <div class="btn btn-back" data-back="menu-main">← Back</div>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="minimap-btn" title="Open map"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffb12b" stroke-width="2" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15"/><path d="M15 6v15"/></svg></div>
+      <div id="speed-readout"><span id="speed-val">0</span> <small>km/h</small></div>
+      <div id="leaderboard">
+        <div class="lb-title">Leaderboard</div>
+        <ol id="lb-list"></ol>
+      </div>
+      <div id="hp-wrap"><div id="hp-bar"></div><span id="hp-text">100 / 100</span></div>
+      <div id="camo-indicator"><span id="camo-dot"></span><span id="camo-text">EXPOSED</span></div>
+      <div id="drift-hint" class="hidden">DRIFT</div>
+    </div>
+
+    <!-- FULLSCREEN MAP -->
+    <div id="bigmap" class="hidden">
+      <div id="bigmap-close" title="Close">✕</div>
+      <canvas id="bigmap-canvas"></canvas>
+    </div>
+
+    <!-- ESC MENU -->
+    <div id="esc-menu" class="menu hidden">
+      <div class="menu-card">
+        <h2>Exit to main menu?</h2>
+        <div class="hint" style="text-align:center;margin-bottom:8px">Are you sure you want to exit?</div>
+        <div class="btn btn-primary" id="esc-yes">Yes</div>
+        <div class="btn" id="esc-no">No</div>
+      </div>
+    </div>
+
+    <!-- MAP EDITOR -->
+    <div id="editor-overlay" class="hidden">
+      <div id="editor-canvas-host"></div>
+      <!-- TOP-LEFT: add figures -->
+      <div class="ed-panel ed-tl">
+        <div class="ed-title">Add Figure</div>
+        <div class="ed-grid">
+          <div class="ed-btn" id="ed-fig-cube">⬛ Cube</div>
+          <div class="ed-btn" id="ed-fig-pyramid">🔺 Pyramid</div>
+          <div class="ed-btn" id="ed-fig-cone"> cone</div>
+          <div class="ed-btn" id="ed-fig-torus">🍩 Torus</div>
+          <div class="ed-btn" id="ed-fig-cylinder">🥫 Cylinder</div>
+        </div>
+      </div>
+      <!-- TOP-RIGHT: save/load/clear/back + hidden unlock -->
+      <div class="ed-panel ed-tr">
+        <div class="ed-title">Map</div>
+        <div class="ed-btn ed-save" id="ed-save">💾 Save</div>
+        <div class="ed-btn" id="ed-load">📂 Load</div>
+        <div class="ed-btn" id="ed-clear">🗑 Clear</div>
+        <div class="ed-btn" id="ed-back">← Back to Menu</div>
+        <hr class="sep">
+        <div class="ed-title">Promote to MAIN (hidden)</div>
+        <input type="text" id="ed-unlock-code" placeholder="unlock code" maxlength="20">
+        <div class="ed-btn" id="ed-unlock-go">Unlock</div>
+      </div>
+      <!-- BOTTOM-LEFT: transform + paint -->
+      <div class="ed-panel ed-bl">
+        <div class="ed-title">Transform</div>
+        <div class="ed-grid">
+          <div class="ed-btn active" id="ed-tool-move">✥ Move</div>
+          <div class="ed-btn" id="ed-tool-scale">⤢ Scale</div>
+          <div class="ed-btn" id="ed-tool-rotate">⟳ Rotate</div>
+        </div>
+        <div class="ed-title" style="margin-top:8px">Paint</div>
+        <div class="ed-row"><span>Color</span><input type="color" id="ed-color" value="#8a8f98"></div>
+        <div class="ed-row"><span>Size</span><input type="range" id="ed-pencil-size" min="0.2" max="3" step="0.1" value="1"><span id="ed-pencil-size-val">1</span></div>
+      </div>
+      <!-- BOTTOM-RIGHT: type tag + inspector -->
+      <div class="ed-panel ed-br">
+        <div class="ed-title">Figure Type</div>
+        <div class="ed-grid">
+          <div class="ed-btn ed-type active" data-type="wall">🧱 Wall/Rock</div>
+          <div class="ed-btn ed-type" data-type="bush">🌿 Bush/Tree</div>
+          <div class="ed-btn ed-type" data-type="water">💧 Water</div>
+        </div>
+        <div class="ed-title" style="margin-top:8px">Inspector</div>
+        <div id="ed-inspector"><div class="muted">Click an object to edit it.<br>Left-drag empty space to orbit (or Shift+drag).</div></div>
+        <div class="ed-btn ed-danger" id="ed-delete" style="margin-top:8px">Delete (Del)</div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="hidden"></div>
+
+    <!-- Connecting overlay -->
+    <div id="connecting" class="menu hidden">
+      <div class="menu-card"><h2>Connecting…</h2><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/ColladaLoader.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+  <!-- Game -->
+  <script src="js/config.js"></script>
+  <script src="js/shaders.js"></script>
+  <script src="js/models.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/tank.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/bot.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
