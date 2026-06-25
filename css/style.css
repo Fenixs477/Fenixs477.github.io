@@ -233,6 +233,9 @@ html, body {
   pointer-events: auto;
   touch-action: none;
 }
+.joystick-hidden {
+  display: none !important;
+}
 .joystick-left {
   left: 30px;
 }

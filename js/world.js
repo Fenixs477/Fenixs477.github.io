@@ -36,18 +36,18 @@ class World {
 
   /* ---------- Ground (textured shader) ---------- */
   _makeGround(){
-    // Procedural grass texture as fallback (always works)
+    // Original procedural grass texture (same as original ZCodeProject)
     const c = document.createElement('canvas');
     c.width = c.height = 1024;
     const g = c.getContext('2d');
-    g.fillStyle = '#4a7a2a'; g.fillRect(0,0,1024,1024);
+    g.fillStyle = '#33401f'; g.fillRect(0,0,1024,1024);
     for(let i=0;i<2600;i++){
       const x=Math.random()*1024, y=Math.random()*1024, r=4+Math.random()*22;
-      const tone = 40+Math.random()*60;
-      g.fillStyle = `rgba(${tone+30},${tone+80},${tone+20},${0.2+Math.random()*0.2})`;
+      const tone = 30+Math.random()*40;
+      g.fillStyle = `rgba(${tone+10},${tone+50},${tone+10},${0.18+Math.random()*0.18})`;
       g.beginPath(); g.arc(x,y,r,0,7); g.fill();
     }
-    g.strokeStyle = '#7a6040'; g.lineWidth = 26; g.lineCap='round';
+    g.strokeStyle = '#5a4329'; g.lineWidth = 22; g.lineCap='round';
     for(let p=0;p<5;p++){
       g.beginPath();
       let x=Math.random()*1024, y=Math.random()*1024;
@@ -57,23 +57,12 @@ class World {
       g.stroke();
     }
     for(let i=0;i<600;i++){
-      g.fillStyle = `rgba(${120+Math.random()*40},${100+Math.random()*30},${60+Math.random()*20},0.5)`;
+      g.fillStyle = `rgba(${90+Math.random()*30},${67+Math.random()*20},${41+Math.random()*15},0.5)`;
       g.fillRect(Math.random()*1024,Math.random()*1024,2,2);
     }
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(6,6);
-    
-    // Try to load the real grass texture, fallback to procedural
-    const grassImg = new Image();
-    grassImg.src = 'Cartoon_green_texture_grass.jpg';
-    grassImg.onload = function(){
-      tex.image = grassImg;
-      tex.needsUpdate = true;
-    };
-    grassImg.onerror = function(){
-      // Keep the procedural texture
-    };
 
     const mat = new THREE.MeshStandardMaterial({map: tex, roughness: 0.9, metalness: 0});
     this.groundMat = mat;

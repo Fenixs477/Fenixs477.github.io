@@ -199,7 +199,18 @@ class Input {
         size: 110,
         fireOnMax: true,   // auto-fire when moved
       });
+      
+      // Hide joysticks initially (only show during gameplay)
+      this.setJoysticksVisible(false);
     }
+  }
+
+  /* Show/hide joystick overlays (called from game start/stop) */
+  setJoysticksVisible(visible){
+    const moveEl = document.getElementById('joystick-move');
+    const turretEl = document.getElementById('joystick-turret');
+    if(moveEl) moveEl.classList.toggle('joystick-hidden', !visible);
+    if(turretEl) turretEl.classList.toggle('joystick-hidden', !visible);
   }
 
   consumeWheel(){

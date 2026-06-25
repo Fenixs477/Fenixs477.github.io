@@ -292,6 +292,10 @@ class Game {
     Menu.showHUD();
     this.running = true;
     this._last = performance.now();
+    // Show touch joysticks when game starts (only on mobile)
+    if(this.input && this.input.setJoysticksVisible){
+      this.input.setJoysticksVisible(true);
+    }
   }
 
   leaveToMenu(){
@@ -304,6 +308,10 @@ class Game {
     document.getElementById('bigmap').classList.add('hidden');
     if(Menu.escOpen) Menu.escOpen = false;
     Menu.show('menu-main');
+    // Hide touch joysticks when returning to menu
+    if(this.input && this.input.setJoysticksVisible){
+      this.input.setJoysticksVisible(false);
+    }
   }
 
   /* ===========================================================
